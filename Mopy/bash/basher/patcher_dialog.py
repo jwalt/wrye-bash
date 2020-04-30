@@ -154,6 +154,9 @@ class PatchDialog(DialogWindow):
         """Do the patch."""
         self.accept_modal()
         progress = None
+        import cProfile, pstats
+        pr = cProfile.Profile()
+        pr.enable()
         try:
             patch_name = self.patchInfo.ci_key
             patch_size = self.patchInfo.fsize
@@ -185,6 +188,10 @@ class PatchDialog(DialogWindow):
             progress(0.9)
             self._save_pbash(patchFile, patch_name)
             #--Done
+            pr.disable()
+            s = io.StringIO()
+            pstats.Stats(pr, stream=s).sort_stats(u'cumulative').print_stats()
+            bolt.deprint(s.getvalue())
             progress.Destroy(); progress = None
             timer2 = time.process_time()
             #--Readme and log
