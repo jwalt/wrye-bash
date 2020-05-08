@@ -115,7 +115,7 @@ def getbestencoding(bitstream):
     #print('%s: %s (%s)' % (repr(bitstream),encoding,confidence))
     return encoding_,confidence
 
-def decoder(byte_str, encoding=None, avoidEncodings=()):
+def decoder(byte_str, encoding=None, avoidEncodings=(), returnEncoding=False):
     """Decode a byte string to unicode, using heuristics on encoding."""
     if isinstance(byte_str, str) or byte_str is None: return byte_str
     # Try the user specified encoding first
@@ -123,18 +123,26 @@ def decoder(byte_str, encoding=None, avoidEncodings=()):
         # TODO(ut) monkey patch
         if encoding == u'cp65001':
             encoding = u'utf-8'
-        try: return str(byte_str, encoding)
+        try:
+            return str(byte_str, encoding), encoding if returnEncoding \
+                else str(byte_str, encoding)
         except UnicodeDecodeError: pass
     # Try to detect the encoding next
     encoding, confidence = getbestencoding(byte_str)
     if encoding and confidence >= 0.55 and (
             encoding not in avoidEncodings or confidence == 1.0) and (
             encoding not in _blocked_encodings):
-        try: return str(byte_str, encoding)
+        try:
+            result1 = str(byte_str, encoding), encoding if returnEncoding \
+                else str(byte_str, encoding)
+            return result1
         except UnicodeDecodeError: pass
     # If even that fails, fall back to the old method, trial and error
     for encoding in encodingOrder:
-        try: return str(byte_str, encoding)
+        try:
+            result2 = str(byte_str, encoding), encoding if returnEncoding \
+                else str(byte_str, encoding)
+            return result2
         except UnicodeDecodeError: pass
     raise UnicodeDecodeError(u'Text could not be decoded using any method')
 
@@ -346,6 +354,98 @@ class CIstr(str):
     #--repr
     def __repr__(self):
         return u'%s(%s)' % (type(self).__name__, super(CIstr, self).__repr__())
+
+class PluginStr(bytes):
+    """Plugin string - decode/rstrip when needed in comparisons. Base class
+    will use pluginEncoding for decoding."""
+    _preferred_encoding = None
+    # Nonempty __slots__ does not work for classes derived from
+    # "variable-length" built-in types such as long, str and tuple.
+
+    @property
+    def preferred_encoding(self):
+        return self._preferred_encoding or pluginEncoding
+
+    @property
+    def _decoded(self):
+        """Keep the encoding used by the decoder - if self.preferred_encoding
+        is None or decoder failed with it it will fallback to chardet."""
+        try:
+            return self._decoded_str
+        except AttributeError:
+            # it may happen to have more that one null terminator
+            byte_str = self.rstrip(b'\x00')
+            self._decoded_str, self._preferred_encoding = decoder(byte_str,
+                self.preferred_encoding, avoidEncodings=self._avoid_encodings,
+                returnEncoding=True)
+            return self._decoded_str
+
+    def reencode(self, target_encoding, maxSize=None, minSize=0):
+        """Decode then reencode the bytes if our preferred_encoding does not
+        match target_encoding. Note that if it *does* match, no decoding
+        operation will be performed to the string, caller is responsible for
+        making sure that self is *actually* a valid target-encoding encoded
+        byte string."""
+        # TODO self._preferred_encoding? would force reencoding in most cases
+        if self.preferred_encoding == target_encoding:
+            if not minSize and maxSize is None:
+                return self
+            to_encode = self # hopefully will not try to encode it
+        else: to_encode = self._decoded
+        return encode_complex_string(to_encode, maxSize, minSize,
+            target_encoding)
+
+    #--Hash/Compare
+    def __hash__(self):
+        return hash(self._decoded.lower())
+    def __eq__(self, other):
+        if isinstance(other, PluginStr):
+            return self._decoded.lower() == other._decoded.lower()
+        if isinstance(other, str):
+            return self._decoded.lower() == other.lower()
+        return NotImplemented
+    def __ne__(self, other):
+        if isinstance(other, PluginStr):
+            return self._decoded.lower() != other._decoded.lower()
+        if isinstance(other, str):
+            return self._decoded.lower() != other.lower()
+        return NotImplemented
+    def __lt__(self, other):
+        if isinstance(other, PluginStr):
+            return self._decoded.lower() < other._decoded.lower()
+        if isinstance(other, str):
+            return self._decoded.lower() != other.lower()
+        return NotImplemented
+    def __ge__(self, other):
+        if isinstance(other, PluginStr):
+            return self._decoded.lower() >= other._decoded.lower()
+        if isinstance(other, str):
+            return self._decoded.lower() != other.lower()
+        return NotImplemented
+    def __gt__(self, other):
+        if isinstance(other, PluginStr):
+            return self._decoded.lower() > other._decoded.lower()
+        if isinstance(other, str):
+            return self._decoded.lower() != other.lower()
+        return NotImplemented
+    def __le__(self, other):
+        if isinstance(other, PluginStr):
+            return self._decoded.lower() <= other._decoded.lower()
+        if isinstance(other, str):
+            return self._decoded.lower() != other.lower()
+        return NotImplemented
+    #--repr
+    def __repr__(self):
+        return u'%s(%s)' % (type(self).__name__, super(PluginStr, self).__repr__())
+    def __str__(self):
+        return self._decoded
+
+class ChardetStr(PluginStr):
+    """Use if you want automatic encoding detection - slow!"""
+
+    @property
+    def preferred_encoding(self):
+        return self._preferred_encoding # None == automatic detection
 
 class LowerDict(dict):
     """Dictionary that transforms its keys to CIstr instances.
