@@ -38,8 +38,8 @@ from copy import deepcopy
 
 from .loot_conditions import _ACondition, Comparison, ConditionAnd, \
     ConditionFunc, ConditionNot, ConditionOr, is_regex
-from ..bolt import deprint, LowerDict, Path, AFile
-from ..exception import LexerError, ParserError, BoltError, EvalError
+from .bolt import deprint, LowerDict, Path, AFile
+from .exception import LexerError, ParserError, BoltError, EvalError
 
 # Try to use the C version (way faster), if that isn't possible fall back to
 # the pure Python version
@@ -90,6 +90,8 @@ class LOOTParser(object):
         self._refresh_tags_cache(_force=True)
         # Old api
         self._tagCache = {}
+        deprint(u'Initialized loot_parser, compatible with libloot '
+                u'v%s' % libloot_version)
 
     def _refresh_tags_cache(self, _force=False):
         try:

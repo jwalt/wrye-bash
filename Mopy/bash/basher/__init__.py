@@ -63,7 +63,8 @@ from typing import Optional, List
 import wx
 
 #--Local
-from .. import bush, bosh, bolt, bass, env, load_order, archives
+from .. import bush, bosh, bolt, bass, env, load_order, archives, \
+    initialization
 from ..bolt import GPath, SubProgress, deprint, round_size, dict_sort, \
     top_level_items, GPath_no_norm, os_name
 from ..bosh import omods, ModInfo
@@ -3986,7 +3987,7 @@ class BashFrame(WindowFrame):
         self.inRefreshData = True
         popMods = popSaves = popBsas = None
         #--Config helpers
-        bosh.lootDb.refreshBashTags()
+        initialization.lootDb.refreshBashTags()
         #--Check bsas, needed to detect string files in modInfos refresh...
         bosh.oblivionIni.get_ini_language(cached=False) # reread ini language
         if not booting and bosh.bsaInfos.refresh():
