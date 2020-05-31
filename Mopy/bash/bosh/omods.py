@@ -162,7 +162,7 @@ class OmodFile(object):
         omod_tail = self.omod_path.stail
         current = 0
         cmd7z = [archives.exe7z, u'e', u'-r', u'-sccUTF-8', self.omod_path.s,
-                 u'-o%s' % extractDir, u'-bb1']
+                 f'-o{extractDir}', u'-bb1']
         with popen_common(cmd7z, encoding='utf-8').stdout as ins:
             for line in ins:
                 maExtracting = reExtracting.match(line)
@@ -230,7 +230,8 @@ class OmodFile(object):
 
         # Extracted data stream is saved as a file named 'a'
         progress(0, self.omod_path.tail + u'\n' + _(u'Unpacking %s') % dataPath.stail)
-        cmd = [archives.exe7z, u'e', u'-r', u'-sccUTF-8', dataPath.s, u'-o%s' % outPath]
+        cmd = [archives.exe7z, u'e', u'-r', u'-sccUTF-8', dataPath.s,
+               f'-o{outPath}']
         subprocess.call(cmd, startupinfo=startupinfo)
 
         # Split the uncompress stream into files
