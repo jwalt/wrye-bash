@@ -25,6 +25,7 @@ functions to initialize bass.dirs that need be initialized high up into the
 boot sequence to be able to backup/restore settings."""
 import io
 from configparser import ConfigParser, MissingSectionHeaderError
+from typing import Optional
 
 # Local - make sure that all imports here are carefully done in bash.py first
 from .bass import dirs, get_ini_option
@@ -34,12 +35,17 @@ from .env import get_personal_path, get_local_app_data_path, \
     get_win_store_game_info, shellMakeDirs
 from .exception import BoltError, NonExistentDriveError
 
-mopy_dirs_initialized = bash_dirs_initialized = False
-
+##: we need to import LOOTParser after defining this as LOOTParser imports bush
+# real solution is to make dirs pathlib.Paths so this function is moved to bass
 def get_path_from_ini(bash_ini_, option_key, section_key=u'General'):
     get_value = get_ini_option(bash_ini_, option_key, section_key)
     get_value = (get_value and get_value.strip()) or u'.'
     return GPath(get_value) if get_value != u'.' else None
+from .loot_parser import LOOTParser
+
+mopy_dirs_initialized = bash_dirs_initialized = False
+#--Config Helper files (LOOT Master List, etc.)
+lootDb = None # type: Optional[LOOTParser]
 
 def getPersonalPath(bash_ini_, my_docs_path):
     #--Determine User folders from Personal and Local Application Data directories
@@ -250,6 +256,12 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
         msg = _dirs_err_msg(e, dir_keys, bainDataSrc, modsBashSrc,
                             oblivionMods, oblivionModsSrc)
         raise BoltError(msg)
+    loot_path = dirs[u'local_appdata'].join(u'LOOT', game_info.loot_dir)
+    lootMasterPath = loot_path.join(u'masterlist.yaml')
+    lootUserPath = loot_path.join(u'userlist.yaml')
+    tagList = dirs[u'taglists'].join(u'taglist.yaml')
+    global lootDb
+    lootDb = LOOTParser(lootMasterPath, lootUserPath, tagList)
     global bash_dirs_initialized
     bash_dirs_initialized = True
     return game_ini_path, init_warnings
