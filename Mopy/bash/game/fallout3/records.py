@@ -28,7 +28,7 @@ from collections import OrderedDict
 from ... import brec, bush
 from ...bolt import Flags, structs_cache, TrimmedFlags
 from ...brec import MelRecord, MelGroups, MelStruct, FID, MelGroup, \
-    MelString, MelSet, MelFid, MelOptStruct, MelFids, MreHeaderBase, \
+    MelString, MelSet, MelFid, MelOptStruct, MreHeaderBase, \
     MelBase, MreGmstBase, MelBodyParts, MelMODS, MelFactions, \
     MelReferences, MelColorInterpolator, MelValueInterpolator, MelAnimations, \
     MelUnion, AttrValDecider, MelRegnEntrySubrecord, SizeDecider, MelFloat, \
@@ -507,7 +507,7 @@ class MreAmmo(MelRecord):
             'consumedPercentage', old_versions={'2If'})),
         MelString(b'ONAM','shortName'),
         fnv_only(MelString(b'QNAM', 'abbrev')),
-        fnv_only(MelFids(b'RCIL', 'effects')),
+        fnv_only(MelGroups(u'effects', MelFid(b'RCIL'))),
     )
     __slots__ = melSet.getSlotsUsed()
 
@@ -612,7 +612,7 @@ class MreAspc(MelRecord):
         MelBounds(),
         if_fnv(
             fo3_version=MelFid(b'SNAM', 'soundLooping'),
-            fnv_version=MelFids(b'SNAM', 'soundLooping'),
+            fnv_version=MelGroups(u'soundLooping', MelFid(b'SNAM')),
         ),
         fnv_only(MelUInt32(b'WNAM', 'wallaTrigerCount')),
         MelFid(b'RDAT','useSoundFromRegion'),
@@ -910,7 +910,7 @@ class MreCpth(MelRecord):
         MelConditions(),
         MelArray(u'relatedCameraPaths', MelFid(b'ANAM')),
         MelUInt8(b'DATA', 'cameraZoom'),
-        MelFids(b'SNAM','cameraShots',),
+        MelGroups(u'cameraShots', MelFid(b'SNAM')),
     )
     __slots__ = melSet.getSlotsUsed()
 
@@ -976,7 +976,7 @@ class MreCrea(MreActor):
                   'unused_aidt', (aiService, u'services'),
                   ('trainSkill', -1), 'trainLevel', 'assistance',
                   (aggroflags, u'aggroRadiusBehavior'), 'aggroRadius'),
-        MelFids(b'PKID','aiPackages'),
+        MelGroups(u'aiPackages', MelFid(b'PKID')),
         MelAnimations(),
         MelStruct(b'DATA', [u'4B', u'h', u'2s', u'h', u'7B'],'creatureType','combatSkill','magicSkill',
             'stealthSkill','health','unused2','damage','strength',
@@ -1064,8 +1064,8 @@ class MreDial(MelRecord):
 
     melSet = MelSet(
         MelEdid(),
-        MelSorted(MelFids(b'QSTI', 'added_quests')),
-        MelSorted(MelFids(b'QSTR', 'removed_quests')),
+        MelSorted(MelGroups(u'added_quests', MelFid(b'QSTI'))),
+        MelSorted(MelGroups(u'removed_quests', MelFid(b'QSTR'))),
         MelFull(),
         MelFloat(b'PNAM', 'priority'),
         MelTruncatedStruct(b'DATA', [u'2B'], 'dialType',
@@ -1360,7 +1360,7 @@ class MreHdpt(MelRecord):
         MelFull(),
         MelModel(),
         MelUInt8Flags(b'DATA', u'flags', _flags),
-        MelSorted(MelFids(b'HNAM', 'extraParts')),
+        MelSorted(MelGroups(u'extraParts', MelFid(b'HNAM'))),
     )
     __slots__ = melSet.getSlotsUsed()
 
@@ -1588,7 +1588,7 @@ class MreInfo(MelRecord):
         MelFid(b'QSTI', u'info_quest'),
         MelFid(b'TPIC', u'info_topic'),
         MelFid(b'PNAM', 'prev_info'),
-        MelFids(b'NAME','addTopics'),
+        MelGroups(u'addTopics', MelFid(b'NAME')),
         MelGroups('responses',
             MelStruct(b'TRDT', [u'I', u'i', u'4s', u'B', u'3s', u'I', u'B', u'3s'],'emotionType','emotionValue','unused1','responseNum',('unused2',b'\xcd\xcd\xcd'),
                       (FID,'sound'),'flags',('unused3',b'\xcd\xcd\xcd')),
@@ -1599,9 +1599,9 @@ class MreInfo(MelRecord):
             MelFid(b'LNAM','listenerAnimation'),
         ),
         MelConditions(),
-        MelFids(b'TCLT','choices'),
-        MelFids(b'TCLF','linksFrom'),
-        fnv_only(MelFids(b'TCFU', 'follow_up')),
+        MelGroups(u'choices', MelFid(b'TCLT')),
+        MelGroups(u'linksFrom', MelFid(b'TCLF')),
+        fnv_only(MelGroups(u'follow_up', MelFid(b'TCFU'))),
         MelGroup('scriptBegin',
             MelEmbeddedScript(),
         ),
@@ -1759,7 +1759,7 @@ class MreLtex(MelRecord):
         MelFid(b'TNAM', 'texture'),
         MelOptStruct(b'HNAM', [u'3B'],'materialType','friction','restitution'),
         MelUInt8(b'SNAM', 'specular'),
-        MelSorted(MelFids(b'GNAM', 'grass')),
+        MelSorted(MelGroups(u'grass', MelFid(b'GNAM'))),
     )
     __slots__ = melSet.getSlotsUsed()
 
@@ -2062,14 +2062,14 @@ class MreNpc(MreActor):
                   'unused_aidt',(aiService, u'services'),
                   ('trainSkill', -1), 'trainLevel', 'assistance',
                   (aggroflags, u'aggroRadiusBehavior'), 'aggroRadius'),
-        MelFids(b'PKID','aiPackages'),
+        MelGroups(u'aiPackages', MelFid(b'PKID')),
         MelAnimations(),
         MelFid(b'CNAM','iclass'),
         MelUnion({
             11: _MelNpcData([u'I', u'7B']),
             25: _MelNpcData([u'I', u'21B'])
         }, decider=_MelNpcDecider()),
-        MelSorted(MelFids(b'PNAM', 'headParts')),
+        MelSorted(MelGroups(u'headParts', MelFid(b'PNAM'))),
         MelNpcDnam(b'DNAM', [u'14B', u'14B'], (u'skillValues', [0] * 14),
                    (u'skillOffsets', [0] * 14)),
         MelFid(b'HNAM', 'hair'),
@@ -2714,7 +2714,7 @@ class MreRefr(MelRecord):
             MelUInt32(b'XAMC', 'count'),
         ),
         MelReflectedRefractedBy(),
-        MelSorted(MelFids(b'XLTW', 'litWaters')),
+        MelSorted(MelGroups(u'litWaters', MelFid(b'XLTW'))),
         MelLinkedDecals(),
         MelFid(b'XLKR','linkedReference'),
         MelOptStruct(b'XCLP', [u'8B'],'linkStartColorRed','linkStartColorGreen','linkStartColorBlue','linkColorUnused1',
@@ -2738,7 +2738,7 @@ class MreRefr(MelRecord):
             MelPartialCounter(MelStruct(
                 b'XRMR', [u'H', u'2s'], 'linked_rooms_count', 'unknown1'),
                 counter='linked_rooms_count', counts='linked_rooms'),
-            MelSorted(MelFids(b'XLRM', 'linked_rooms')),
+            MelSorted(MelGroups(u'linked_rooms', MelFid(b'XLRM'))),
         ),
         MelOptStruct(b'XOCP', [u'9f'],'occlusionPlaneWidth','occlusionPlaneHeight','occlusionPlanePosX','occlusionPlanePosY','occlusionPlanePosZ',
                      'occlusionPlaneRot1','occlusionPlaneRot2','occlusionPlaneRot3','occlusionPlaneRot4'),
@@ -2800,7 +2800,7 @@ class MreRegn(MelRecord):
             fnv_only(MelRegnEntrySubrecord(
                 7, MelFid(b'RDSI', 'incidentalMediaSet'))),
             fnv_only(MelRegnEntrySubrecord(
-                7, MelFids(b'RDSB', 'battleMediaSets'))),
+                7, MelGroups(u'battleMediaSets', MelFid(b'RDSB')))),
             MelRegnEntrySubrecord(7, MelSorted(MelArray('sounds',
                 MelStruct(b'RDSD', [u'3I'], (FID, 'sound'), (sdflags, 'flags'),
                           'chance'),
@@ -3243,7 +3243,7 @@ class MreWeap(MelRecord):
         )),
         if_fnv(
             fo3_version=MelFid(b'SNAM', 'soundGunShot3D'),
-            fnv_version=MelFids(b'SNAM', 'soundGunShot3D'),
+            fnv_version=MelGroups(u'soundGunShot3D', MelFid(b'SNAM')),
         ),
         MelFid(b'XNAM','soundGunShot2D'),
         MelFid(b'NAM7','soundGunShot3DLooping'),
@@ -3252,7 +3252,7 @@ class MreWeap(MelRecord):
         MelFid(b'UNAM','idleSound',),
         MelFid(b'NAM9','equipSound',),
         MelFid(b'NAM8','unequipSound',),
-        fnv_only(MelFids(b'WMS1', 'soundMod1Shoot3Ds')),
+        fnv_only(MelGroups(u'soundMod1Shoot3Ds', MelFid(b'WMS1'))),
         fnv_only(MelFid(b'WMS2', 'soundMod1Shoot2D')),
         MelStruct(b'DATA', [u'2I', u'f', u'H', u'B'],'value','health','weight','damage','clipsize'),
         if_fnv(
