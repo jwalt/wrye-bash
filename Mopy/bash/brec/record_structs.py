@@ -27,6 +27,7 @@ from collections import defaultdict
 import copy
 import io
 import zlib
+from collections import Counter
 
 from .basic_elements import SubrecordBlob, unpackSubHeader
 from .mod_io import ModReader
@@ -565,6 +566,8 @@ class MelRecord(MreRecord):
     # subrecord. See MelSet.check_duplicate_attrs for more information.
     _has_duplicate_attrs = False
     __slots__ = []
+    _cache_misses = Counter()
+    _key_errors = Counter()
 
     def __init__(self, header, ins=None, do_unpack=False):
         if self.__class__.rec_sig != header.recType:
@@ -632,6 +635,7 @@ class MelRecord(MreRecord):
         self.__class__.melSet.updateMasters(self, masterset_add)
 
     def __getattr__(self, missing_attr):
+        self.__class__._cache_misses[missing_attr] += 1
         if missing_attr in self.__class__.melSet.defaulters:
             target = self.__class__.melSet.defaulters[missing_attr]
         elif missing_attr in self.__class__.melSet.listers:
@@ -639,6 +643,10 @@ class MelRecord(MreRecord):
         elif missing_attr in self.__class__.melSet.mel_providers_dict:
             target = self.__class__.melSet.mel_providers_dict[missing_attr]()
         else:
+            if not missing_attr in self.__class__._key_errors:
+                # https://stackoverflow.com/a/33388198/281545
+                print (missing_attr) # '__deepcopy__' !
+            self.__class__._key_errors[missing_attr] += 1
             raise AttributeError(missing_attr)
         setattr(self, missing_attr, target)
         return target
