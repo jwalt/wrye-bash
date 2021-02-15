@@ -150,7 +150,7 @@ class Installers_MonitorInstall(Installers_Link):
         include = set(chain.from_iterable(lists))
         if not include: return
         # Create Project
-        projectName = self._askText(_(u'Project Name'),
+        projectName = self._askText(_(u'Project Name'), # TODO(ut): askFilename
                                     _(u'External Installation'))
         if not projectName:
             return
