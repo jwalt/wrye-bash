@@ -48,6 +48,10 @@ class MorrowindGameInfo(PatchGame):
     using_txt_file = False
     plugin_name_specific_dirs = [] # Morrowind seems to have no such dirs
 
+    # class Ws(GameInfo.Ws):
+    #     win_store_key = u'BethesdaSoftworks.TESMorrowind-PC'
+    #     mwa_game_name = u'Morrowind GOTY (PC)'
+
     class Ck(GameInfo.Ck):
         ck_abbrev = u'TESCS'
         long_name = u'Construction Set'

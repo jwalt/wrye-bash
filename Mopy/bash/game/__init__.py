@@ -109,6 +109,15 @@ class GameInfo(object):
         self.gamePath = gamePath # absolute bolt Path to the game directory
         self.has_esl = u'.esl' in self.espm_extensions
 
+    class Ws(object):
+        """Information about this game on the Windows Store."""
+        # The key used internally by the Windows Store for this game, e.g.
+        # 'BethesdaSoftworks.TESMorrowind-PC' for Morrowind. If empty,
+        # indicates that this game is not available on the Windows Store
+        win_store_key = u''
+        # The name of this game in the ModifiableWindowsApps folder
+        mwa_game_name = u''
+
     class Ck(object):
         """Information about the official plugin editor (generally called some
         variation of 'Creation Kit') for this game."""
