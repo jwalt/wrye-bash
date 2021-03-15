@@ -216,62 +216,83 @@ def _query_fixed_field_version(file_name, version_prefix):
     return win32api.HIWORD(ms), win32api.LOWORD(ms), win32api.HIWORD(ls), \
            win32api.LOWORD(ls)
 
-# Global cache, _find_win_store_packages is expensive
-_win_store_packages = None
 
-def _find_mutable_ws_packages():
-    """Finds a list of all installed Windows Store apps that have a
-    MutableLocation defined."""
-    global _win_store_packages
-    if _win_store_packages is not None:
-        return _win_store_packages
-    _win_store_packages = {}
-    # Hit up the package repository index. Have to do this manually, since the
-    # high level APIs for this are UWP-exclusive
-    try:
-        pfn_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                                 r'SOFTWARE\Microsoft\Windows\CurrentVersion'
-                                 r'\AppModel\StateRepository\Cache\Package'
-                                 r'\Index\PackageFullName')
-    except WindowsError:
-        # We're on a version of Windows that does not have the package registry
-        return _win_store_packages
-    package_index = {}
-    for i in itertools.count():
-        # We found a package, retrieve its package index
+class _WindowsStoreFinder(object):
+    developer_ids = {
+        u'Bethesda': u'3275kfvn8vcwc'
+    }
+
+    def __init__(self):
+        # Structure: dict
+        #  common_name: dict
+        #    package_full_name: mutable_location
+        self.location_cache = {}
+
+    def _get_publisher_id(self, publisher_name):
         try:
-            package_name = winreg.EnumKey(pfn_key, i)
-        except WindowsError:
-            break # No more packages to iterate over, abort
-        package_key = winreg.OpenKey(pfn_key, package_name)
-        # Packages always have a single subkey, their hexadecimal index
-        package_index[winreg.EnumKey(package_key, 0)] = package_name
-        winreg.CloseKey(package_key)
-    winreg.CloseKey(pfn_key)
-    # Now we've constructed the package index, use it to look up the paths in
-    # the package repository data
-    repo_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                              r'SOFTWARE\Microsoft\Windows\CurrentVersion'
-                              r'\AppModel\StateRepository\Cache\Package\Data')
-    for i in itertools.count():
+            return self.developer_ids[publisher_name]
+        except KeyError:
+            return None
+
+    def _get_package_full_names(self, common_name, publisher_id):
+        common_name += '_' + publisher_id
+        full_names = []
         try:
-            data_index = winreg.EnumKey(repo_key, i)
-        except WindowsError:
-            break # No more packages to iterate over, abort
-        if data_index not in package_index:
-            continue # Shouldn't happen, but just in case
-        data_key = winreg.OpenKey(repo_key, data_index)
+            # First, find all "families" for the game (architecture, version)
+            families_key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT,
+                                          r'Local Settings\Software\Microsoft'
+                                          r'\Windows\CurrentVersion\AppModel'
+                                          r'\Repository\Families')
+            with families_key:
+                family_key = winreg.OpenKey(families_key, common_name)
+                num_families = winreg.QueryInfoKey(family_key)[0]
+                for i in xrange(num_families):
+                    full_names.append(winreg.EnumKey(family_key, i))
+        except WindowsError as e:
+            # We're on a version of Windows that does not have the package registry
+            pass
+        return full_names
+
+    def get_mutable_locations(self, common_name, publisher_name=None, publisher_id=None):
+        # Hit the cache first
         try:
-            # Check if it has a MutableLocation subkey and if it's set to a
-            # usable value
-            ml_entry = winreg.QueryValueEx(data_key, 'MutableLocation')
-            if ml_entry[0] and ml_entry[1] == winreg.REG_SZ:
-                _win_store_packages[package_index[data_index]] = ml_entry[0]
+            return self.location_cache[common_name]
+        except KeyError:
+            pass
+        # Not in the cached, lookup in the Windows Registry
+        if not publisher_id:
+            publisher_id = self._get_publisher_id(publisher_name)
+        if not publisher_id:
+            # No publisher information, cannot look up
+            return None
+        self.location_cache[common_name] = locations = dict()
+        package_full_names = self._get_package_full_names(common_name, publisher_id)
+        try:
+            for package_full_name in package_full_names:
+                # Lookup the package index
+                index_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                    r'SOFTWARE\Microsoft\Windows\CurrentVersion\AppModel'
+                    r'\StateRepository\Cache\Package\Index\PackageFullName')
+                with index_key:
+                    pfn_key = winreg.OpenKey(index_key, package_full_name)
+                    with pfn_key:
+                        package_index = winreg.EnumKey(pfn_key, 0)
+                # Lookup the mutable location
+                repo_key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                    r'SOFTWARE\Microsoft\Windows\CurrentVersion\AppModel'
+                    r'\StateRepository\Cache\Package\Data')
+                with repo_key:
+                    data_key = winreg.OpenKey(repo_key, package_index)
+                    with data_key:
+                        ml_entry = winreg.QueryValueEx(data_key, 'MutableLocation')
+                        if ml_entry[0] and ml_entry[1] == winreg.REG_SZ:
+                            locations[package_full_name] = ml_entry[0]
         except WindowsError:
-            pass # No MutableLocation subkey, move on
-        winreg.CloseKey(data_key)
-    winreg.CloseKey(repo_key)
-    return _win_store_packages
+            # We're on a version of Windows that does not have the package registry
+            pass
+        return locations
+
+_win_store_finder = _WindowsStoreFinder()
 
 # All code starting from the 'BEGIN MIT-LICENSED PART' comment and until the
 # 'END MIT-LICENSED PART' comment is based on
@@ -687,15 +708,23 @@ def get_registry_game_path(submod):
 def get_win_store_game_path(submod):
     """Check Windows Store-supplied game paths for the game detection
     file(s)."""
-    ws_key = submod.Ws.win_store_key
-    if not ws_key:
-        return None # Game is not available on the Windows Store
-    ws_packages = _find_mutable_ws_packages()
-    for ws_pkg_name, ws_pkg_path in ws_packages.iteritems():
-        # Game packages have the version appended after the internal name
-        if ws_pkg_name.startswith(ws_key):
-            return ws_pkg_path
-    return None
+    ## TODO(lojack): There can potentially be multiple results for a given game
+    ## due to different game version/architecture.  Right now we just take
+    ## the first one, find a good way to pick the best one.  Probably by looking
+    ## at the install time value in the registry.
+    publisher_name = submod.Ws.publisher_name
+    publisher_id = submod.Ws.publisher_id
+    common_name = submod.Ws.win_store_name
+    locations = _win_store_finder.get_mutable_locations(
+        common_name,
+        publisher_name,
+        publisher_id
+    )
+    if locations:
+        # Use the first location for now, see the TODO above
+        return GPath(locations.values()[0])
+    else:
+        return None
 
 def get_personal_path():
     return (GPath(_get_known_path(_FOLDERID.Documents)),

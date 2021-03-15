@@ -111,12 +111,17 @@ class GameInfo(object):
 
     class Ws(object):
         """Information about this game on the Windows Store."""
-        # The key used internally by the Windows Store for this game, e.g.
-        # 'BethesdaSoftworks.TESMorrowind-PC' for Morrowind. If empty,
-        # indicates that this game is not available on the Windows Store
-        win_store_key = u''
-        # The name of this game in the ModifiableWindowsApps folder
-        mwa_game_name = u''
+        # The publisher name for common games.  Currently only
+        # 'Bethesda' is allowed for Bethesda games.  If specified,
+        # publisher_id is not required
+        publisher_name = u''
+        # The publisher ID for the publisher of the game.  Required
+        # except for common publishers supported above.  For example
+        # Bethesda's publisher ID is '3275kfvn8vcwc'
+        publisher_id = u''
+        # The internal name used by the Windows Store to identify the game
+        # For example Morrowind is 'BethesdaSofworks.TESMorrowind-PC'
+        win_store_name = u''
 
     class Ck(object):
         """Information about the official plugin editor (generally called some
