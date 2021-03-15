@@ -181,6 +181,20 @@ def _detectGames(cli_path=u'', bash_ini_=None):
                 return foundGames_, gamename
         # no game exe in this install path - print error message
         deprint(errorMsg % {u'path': test_path})
+    # FIXME(inf) drop - testing on Linux!
+    # foundGames_ = {
+    #     u'Morrowind': GPath(u'/tmp/morrowind'),
+    #     u'Oblivion': GPath(u'/tmp/oblivion'),
+    #     u'Nehrim': GPath(u'/tmp/nehrim'),
+    #     u'Fallout 3': GPath(u'/tmp/fallout3'),
+    #     u'Fallout New Vegas': GPath(u'/tmp/falloutnv'),
+    #     u'Skyrim': GPath(u'/tmp/skyrim'),
+    #     u'Skyrim Special Edition': GPath(u'/tmp/skyrimse'),
+    #     u'Skyrim VR': GPath(u'/tmp/skyrimvr'),
+    #     u'Enderal': GPath(u'/tmp/enderal'),
+    #     u'Fallout 4': GPath(u'/tmp/fallout4'),
+    #     u'Fallout 4 VR': GPath(u'/tmp/fallout4vr'),
+    # }
     # no game found in installPaths - foundGames are the ones from the registry
     return foundGames_, None
 
@@ -207,8 +221,7 @@ def detect_and_set_game(cli_game_dir=u'', bash_ini_=None, gname=None):
         return None
     # No match found, return the list of possible games (may be empty if
     # nothing is found in registry)
-    game_icons = {g: bass.dirs[u'images'].join(g + u'32.png').s
-                  for g in foundGames}
-    return game_icons
+    return {_allGames[found_game]: fg_path for found_game, fg_path
+            in foundGames.iteritems()}
 
 def game_path(display_name): return foundGames[display_name]
