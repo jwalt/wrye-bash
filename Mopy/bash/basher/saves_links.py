@@ -905,11 +905,11 @@ class Save_UpdateNPCLevels(EnabledLink):
                 short_mapper = modFile.getShortMapper()
                 #--Loop over mod NPCs
                 mapToOrdered = MasterMap(modFile.augmented_masters(), ordered)
-                for npc in modFile.tops[b'NPC_'].getActiveRecords():
-                    fid = mapToOrdered(short_mapper(npc.fid), None)
-                    if not fid: continue
-                    npc_info[fid] = (npc.eid, npc.level_offset, npc.calcMin,
-                                     npc.calcMax, npc.flags.pcLevelOffset)
+                for rfid, npc in modFile.tops[b'NPC_'].iter_present_records():
+                    if fid_ := mapToOrdered(short_mapper(rfid), None):
+                        npc_info[fid_] = (
+                            npc.eid, npc.level_offset, npc.calcMin,
+                            npc.calcMax, npc.flags.pcLevelOffset)
             #--Loop over savefiles
             subProgress = SubProgress(progress,0.4,1.0,len(self.selected))
             message = _(u'NPCs Releveled:')
