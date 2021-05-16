@@ -286,7 +286,7 @@ class PatchFile(ModFile):
         if b'MGEF' in modFile.tops:
             shared_rec_types.discard(b'MGEF')
             add_mgef_to_patch = self.tops[b'MGEF'].setRecord
-            for record in modFile.tops[b'MGEF'].getActiveRecords():
+            for rfid_, record in modFile.tops[b'MGEF'].iter_present_records():
                 add_mgef_to_patch(record.getTypeCopy())
         # Update all other record types
         for block_type in shared_rec_types:
