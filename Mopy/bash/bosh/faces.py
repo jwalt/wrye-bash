@@ -463,7 +463,8 @@ class PCFaces(object):
             tes4.masters.append(bush.game.master_file)
         masterMap = MasterMap(face.face_masters, modFile.augmented_masters())
         #--Eid
-        npcEids = {record.eid for record in modFile.tops[b'NPC_'].records}
+        npcEids = {reid for reid, r in
+                   modFile.tops[b'NPC_'].iter_present_records(rec_key='eid')}
         eidForm = u''.join(('sg', bush.game.raceShortNames.get(face.race, 'Unk'),
             (face.gender and 'a' or 'u'), re.sub(r'\W', '', face.pcName), '%02d'))
         count,eid = 0, eidForm % 0
