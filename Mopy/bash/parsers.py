@@ -1093,203 +1093,6 @@ class ScriptText(_TextParser):
                         f'lines:\n{u"".join((modName, FormID, eid))}')
 
 #------------------------------------------------------------------------------
-class _UsesEffectsMixin(_HandleAliases):
-    """Mixin class to support reading/writing effect data to/from csv files"""
-    effect_headers = (
-        _(u'Effect'),_(u'Name'),_(u'Magnitude'),_(u'Area'),_(u'Duration'),
-        _(u'Range'),_(u'Actor Value'),_(u'SE Mod Name'),_(u'SE ObjectIndex'),
-        _(u'SE school'),_(u'SE visual'),_(u'SE Is Hostile'),_(u'SE Name'))
-    recipientTypeNumber_Name = {None:u'NONE',0:u'Self',1:u'Touch',2:u'Target',}
-    recipientTypeName_Number = {y.lower(): x for x, y
-                                in recipientTypeNumber_Name.items()
-                                if x is not None}
-    actorValueNumber_Name = {x: y for x, y
-                             in enumerate(bush.game.actor_values)}
-    actorValueNumber_Name[None] = u'NONE'
-    actorValueName_Number = {y.lower(): x for x, y
-                             in actorValueNumber_Name.items()
-                             if x is not None}
-    schoolTypeNumber_Name = {None:u'NONE',0:u'Alteration',1:u'Conjuration',
-                             2:u'Destruction',3:u'Illusion',4:u'Mysticism',
-                             5:u'Restoration',}
-    schoolTypeName_Number = {y.lower(): x for x, y
-                             in schoolTypeNumber_Name.items()
-                             if x is not None}
-    _row_fmt_str = u'"%s","0x%06X",%s\n'
-    _key2_indexes = (0, 1)
-
-    def __init__(self, aliases_, atts, called_from_patcher=False):
-        super(_UsesEffectsMixin, self).__init__(aliases_, called_from_patcher)
-        self.fid_stats = {}
-        self.id_stored_data = {self._parser_sigs[0]: self.fid_stats}
-        # Get encoders per attribute - each encoder should return a string
-        # corresponding to a csv column
-        self._attr_serializer = OrderedDict( # None for script_fid/effects
-            (k, attr_csv_struct[k][2] if k in attr_csv_struct else None) for k
-            in atts)
-        # special handling for script_fid - used to be exception based...
-        if u'script_fid' in atts:
-            self._attr_serializer[u'script_fid'] = lambda val: (
-                u'"None","None"' if val is None else u'"%s","0x%06X"' % val)
-        # effects
-        if u'effects' in atts:
-            self._attr_serializer[u'effects'] = lambda val: self.writeEffects(
-                val)[1:] # chop off the first comma...
-        self._sort_args = {'values_key': u'eid'}
-
-    def _update_from_csv(self, top_grup_sig, csv_fields, index_dict=None):
-        """Common code for Sigil/Ingredients."""
-        attr_val = super(_UsesEffectsMixin, self)._update_from_csv(
-            top_grup_sig, csv_fields)
-        smod = str_or_none(csv_fields[7])
-        if smod is None: sid = None
-        else: sid = self._coerce_fid(smod, csv_fields[8])
-        attr_val[u'script_fid'] = sid
-        effects_start = len(self._attr_dex) + 4 # for the two long fids
-        attr_val[u'effects'] = self.readEffects(csv_fields[effects_start:])
-        return attr_val
-
-    def _read_record(self, record, id_data, __attrgetters=attrgetter_cache):
-        id_data[record.fid] = {att: __attrgetters[att](record) for att in
-                               self._attr_serializer}
-
-    def readEffects(self, _effects, __packer=structs_cache[u'I'].pack):
-        schoolTypeName_Number = _UsesEffectsMixin.schoolTypeName_Number
-        recipientTypeName_Number = _UsesEffectsMixin.recipientTypeName_Number
-        actorValueName_Number = _UsesEffectsMixin.actorValueName_Number
-        effects = []
-        while len(_effects) >= 13:
-            _effect,_effects = _effects[1:13],_effects[13:]
-            eff_name,magnitude,area,duration,range_,actorvalue,semod,seobj,\
-            seschool,sevisual,seflags,sename = _effect
-            eff_name = str_or_none(eff_name) #OBME not supported
-            # (support requires adding a mod/objectid format to the
-            # csv, this assumes all MGEFCodes are raw)
-            magnitude, area, duration = [int_or_none(x) for x in
-                                         (magnitude, area, duration)]
-            range_ = str_or_none(range_)
-            if range_:
-                range_ = recipientTypeName_Number.get(range_.lower(),
-                                                      int_or_zero(range_))
-            actorvalue = str_or_none(actorvalue)
-            if actorvalue:
-                actorvalue = actorValueName_Number.get(actorvalue.lower(),
-                                                       int_or_zero(actorvalue))
-            if None in (eff_name,magnitude,area,duration,range_,actorvalue):
-                continue
-            rec_type = MreRecord.type_class[self._parser_sigs[0]]
-            eff = rec_type.getDefault(u'effects')
-            effects.append(eff)
-            eff.effect_sig = str_to_sig(eff_name)
-            eff.magnitude = magnitude
-            eff.area = area
-            eff.duration = duration
-            eff.recipient = range_
-            eff.actorValue = actorvalue
-            # script effect
-            semod = str_or_none(semod)
-            if semod is None or not seobj.startswith(u'0x'):
-                continue
-            seschool = str_or_none(seschool)
-            if seschool:
-                seschool = schoolTypeName_Number.get(seschool.lower(),
-                                                     int_or_zero(seschool))
-            seflags = int_or_none(seflags)
-            sename = str_or_none(sename)
-            if any(x is None for x in (seschool, seflags, sename)):
-                continue
-            eff.scriptEffect = se = rec_type.getDefault(
-                u'effects.scriptEffect')
-            se.full = sename
-            se.script_fid = self._coerce_fid(semod, seobj)
-            se.school = seschool
-            sevisuals = int_or_none(sevisual) #OBME not
-            # supported (support requires adding a mod/objectid format to
-            # the csv, this assumes visual MGEFCode is raw)
-            if sevisuals is None: # it was no int try to read unicode MGEF Code
-                sevisuals = str_or_none(sevisual)
-                if sevisuals == u'' or sevisuals is None:
-                    sevisuals = null4
-                else:
-                    sevisuals = str_to_sig(sevisuals)
-            else: # pack int to bytes
-                sevisuals = __packer(sevisuals)
-            sevisual = sevisuals
-            se.visual = sevisual
-            se.flags = seflags # FIXME this need to be a se_flags
-        return effects
-
-    @staticmethod
-    def writeEffects(effects):
-        schoolTypeNumber_Name = _UsesEffectsMixin.schoolTypeNumber_Name
-        recipientTypeNumber_Name = _UsesEffectsMixin.recipientTypeNumber_Name
-        actorValueNumber_Name = _UsesEffectsMixin.actorValueNumber_Name
-        effectFormat = u',,"%s","%d","%d","%d","%s","%s"'
-        scriptEffectFormat = u',"%s","0x%06X","%s","%s","%s","%s"'
-        noscriptEffectFiller = u',"None","None","None","None","None","None"'
-        output = []
-        for effect in effects:
-            efname, magnitude, area, duration, range_, actorvalue = \
-                sig_to_str(effect.effect_sig), effect.magnitude, effect.area, \
-                effect.duration, effect.recipient, effect.actorValue
-            range_ = recipientTypeNumber_Name.get(range_,range_)
-            actorvalue = actorValueNumber_Name.get(actorvalue,actorvalue)
-            output.append(effectFormat % (
-                efname,magnitude,area,duration,range_,actorvalue))
-            if effect.scriptEffect: ##: #480 - setDefault commit - return None
-                se = effect.scriptEffect
-                longid, seschool, sevisual, seflags, sename = \
-                    se.script_fid, se.school, se.visual, se.flags, se.full
-                sevisual = u'NONE' if sevisual == null4 else sig_to_str(
-                    sevisual)
-                seschool = schoolTypeNumber_Name.get(seschool,seschool)
-                output.append(scriptEffectFormat % (longid[0], longid[1],
-                    seschool, sevisual, bool(int(seflags)), sename))
-            else:
-                output.append(noscriptEffectFiller)
-        return u''.join(output)
-
-    _changed_type = list
-    def _write_record(self, record, newStats, changed,
-                      __attrgetters=attrgetter_cache):
-        """Writes stats to specified mod."""
-        imported = False
-        for att, val in newStats.items():
-            old_val = __attrgetters[att](record)
-            if att == u'eid': old_eid = old_val
-            if old_val != val:
-                imported = True
-                setattr_deep(record, att, val)
-        if imported:
-            changed.append(old_eid)
-            record.setChanged()
-
-    def _write_row(self, out, top_grup, rfid, fstats):
-        output = self._row_fmt_str % (*rfid, u','.join(
-            ser(fstats[k]) for k, ser in self._attr_serializer.items()))
-        out.write(output)
-
-#------------------------------------------------------------------------------
-class SigilStoneDetails(_UsesEffectsMixin):
-    """Details on SigilStones, with functions for importing/exporting
-    from/to mod/text file."""
-    _csv_header = (_(u'Mod Name'), _(u'ObjectIndex'), _(u'Editor Id'),
-                   _(u'Name'), _(u'Model Path'), _(u'Bound Radius'),
-                   _(u'Icon Path'), _(u'Script Mod Name'),
-                   _(u'Script ObjectIndex'), _(u'Uses'), _(u'Value'),
-                   _(u'Weight'),) + _UsesEffectsMixin.effect_headers * 2 + (
-                      _(u'Additional Effects (Same format)'),)
-    _parser_sigs = [b'SGST']
-    _attr_dex = {u'eid': 2, u'full': 3, u'model.modPath': 4, u'model.modb': 5,
-                 u'iconPath': 6, u'uses': 9, u'value': 10, u'weight': 11}
-
-    def __init__(self, aliases_=None, called_from_patcher=False):
-        super(SigilStoneDetails, self).__init__(aliases_,
-            [u'eid', u'full', u'model.modPath', u'model.modb', u'iconPath',
-             u'script_fid', u'uses', u'value', u'weight', u'effects'],
-            called_from_patcher)
-
-#------------------------------------------------------------------------------
 class ItemPrices(_HandleAliases):
     """Function for importing/exporting from/to mod/text file only the
     value, name and eid of records."""
@@ -1325,6 +1128,76 @@ class ItemPrices(_HandleAliases):
             self._row_fmt_str % (*lfid, *__getter(stored_data), top_grup))
 
 #------------------------------------------------------------------------------
+class _UsesEffectsMixin(_HandleAliases):
+    """Mixin class to support reading/writing effect data to/from csv files"""
+    _row_fmt_str = u'"%s","0x%06X",%s\n'
+    _key2_indexes = (0, 1)
+
+    def __init__(self, aliases_, atts, called_from_patcher=False):
+        super(_UsesEffectsMixin, self).__init__(aliases_, called_from_patcher)
+        self.fid_stats = {}
+        self.id_stored_data = {self._parser_sigs[0]: self.fid_stats}
+        # Get encoders per attribute - each encoder should return a string
+        # corresponding to a csv column
+        self._attr_serializer = OrderedDict(
+            (k, attr_csv_struct[k][2]) for k in atts)
+        self._sort_args = {'values_key': u'eid'}
+
+    def _update_from_csv(self, top_grup_sig, csv_fields, index_dict=None):
+        """Common code for Sigil/Ingredients."""
+        attr_val = super(_UsesEffectsMixin, self)._update_from_csv(
+            top_grup_sig, csv_fields)
+        smod = str_or_none(csv_fields[7])
+        if smod is None: sid = None
+        else: sid = self._coerce_fid(smod, csv_fields[8])
+        attr_val[u'script_fid'] = sid
+        return attr_val
+
+    def _read_record(self, record, id_data, __attrgetters=attrgetter_cache):
+        id_data[record.fid] = {att: __attrgetters[att](record) for att in
+                               self._attr_serializer}
+
+    _changed_type = list
+    def _write_record(self, record, newStats, changed,
+                      __attrgetters=attrgetter_cache):
+        """Writes stats to specified mod."""
+        imported = False
+        for att, val in newStats.items():
+            old_val = __attrgetters[att](record)
+            if att == u'eid': old_eid = old_val
+            if old_val != val:
+                imported = True
+                setattr_deep(record, att, val)
+        if imported:
+            changed.append(old_eid)
+            record.setChanged()
+
+    def _write_row(self, out, top_grup, rfid, fstats):
+        output = self._row_fmt_str % (*rfid, u','.join(
+            ser(fstats[k]) for k, ser in self._attr_serializer.items()))
+        out.write(output)
+
+#------------------------------------------------------------------------------
+class SigilStoneDetails(_UsesEffectsMixin):
+    """Details on SigilStones, with functions for importing/exporting
+    from/to mod/text file."""
+    _csv_header = (_(u'Mod Name'), _(u'ObjectIndex'), _(u'Editor Id'),
+                   _(u'Name'), _(u'Model Path'), _(u'Bound Radius'),
+                   _(u'Icon Path'), _(u'Script Mod Name'),
+                   _(u'Script ObjectIndex'), _(u'Uses'), _(u'Value'),
+                   _(u'Weight'), *attr_csv_struct[u'effects'])
+    _parser_sigs = [b'SGST']
+
+    def __init__(self, aliases_=None, called_from_patcher=False):
+        super(SigilStoneDetails, self).__init__(aliases_,
+            [u'eid', u'full', u'model.modPath', u'model.modb', u'iconPath',
+             u'script_fid', u'uses', u'value', u'weight', u'effects'],
+            called_from_patcher)
+        self._attr_dex = {u'eid': 2, u'full': 3, u'model.modPath': 4,
+            u'model.modb': 5, u'iconPath': 6, u'uses': 9, u'value': 10,
+            u'weight': 11, u'effects': (12, self._coerce_fid)}
+
+#------------------------------------------------------------------------------
 class SpellRecords(_UsesEffectsMixin):
     """Statistics for spells, with functions for importing/exporting from/to
     mod/text file."""
@@ -1345,13 +1218,12 @@ class SpellRecords(_UsesEffectsMixin):
         atts = (bush.game.spell_stats_attrs if called_from_patcher
                 else self._csv_attrs)
         if detailed:
-            atts += (*self.__class__._extra_attrs, u'effects')
-            self._csv_header += (
-            *(attr_csv_struct[x][1] for x in self.__class__._extra_attrs),
-            *_UsesEffectsMixin.effect_headers * 2,
-            _(u'Additional Effects (Same format)'))
-            self._attr_dex = dict(
-                zip(self.__class__._extra_attrs, range(8, 15)))
+            extra_attrs = self.__class__._extra_attrs
+            atts += (*extra_attrs, u'effects')
+            self._csv_header += (*(attr_csv_struct[x][1] for x in extra_attrs),
+                                 *attr_csv_struct[u'effects'])
+            self._attr_dex = dict(zip(extra_attrs, range(8, 15)))
+            self._attr_dex[u'effects'] = (15, self._coerce_fid)
         super(SpellRecords, self).__init__(aliases_, atts, called_from_patcher)
 
     def _parse_line(self, fields):
@@ -1368,7 +1240,6 @@ class SpellRecords(_UsesEffectsMixin):
         if self._attr_dex:  # and not len(fields) < 7: IndexError
             attr_val = super(_UsesEffectsMixin, self)._update_from_csv(b'SPEL',
                                                                        fields)
-            attr_val[u'effects'] = self.readEffects(fields[15:])
             self.fid_stats[mid].update(attr_val)
 
 #------------------------------------------------------------------------------
@@ -1378,14 +1249,14 @@ class IngredientDetails(_UsesEffectsMixin):
     _csv_header = (_(u'Mod Name'), _(u'ObjectIndex'), _(u'Editor Id'),
         _(u'Name'), _(u'Model Path'), _(u'Bound Radius'), _(u'Icon Path'),
         _(u'Script Mod Name'), _(u'Script ObjectIndex'), _(u'Value'),
-        _(u'Weight'),) + _UsesEffectsMixin.effect_headers * 2 + \
-                  (_(u'Additional Effects (Same format)'),)
+        _(u'Weight'), *attr_csv_struct[u'effects'])
     _parser_sigs = [b'INGR']
-    _attr_dex = {u'eid': 2, u'full': 3, u'model.modPath': 4, u'model.modb': 5,
-                 u'iconPath': 6, u'value': 9, u'weight': 10}
 
     def __init__(self, aliases_=None, called_from_patcher=False):
         # same as SGST apart from 'uses'
         super(IngredientDetails, self).__init__(aliases_, [u'eid', u'full',
             u'model.modPath', u'model.modb', u'iconPath', u'script_fid',
             u'value', u'weight', u'effects'], called_from_patcher)
+        self._attr_dex = {u'eid': 2, u'full': 3, u'model.modPath': 4,
+                          u'model.modb': 5, u'iconPath': 6, u'value': 9,
+                          u'weight': 10, u'effects': (11, self._coerce_fid)}
