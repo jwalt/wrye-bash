@@ -2190,10 +2190,6 @@ class _ARP_Subpath(object):
         """:rtype: list"""
         raise exception.AbstractError(u'rp_eval not implemented')
 
-    def rp_exists(self, record):
-        """:rtype: bool"""
-        raise exception.AbstractError(u'rp_exists not implemented')
-
     def rp_map(self, record, func, *args):
         raise exception.AbstractError(u'rp_map not implemented')
 
@@ -2201,14 +2197,11 @@ class _RP_Subpath(_ARP_Subpath):
     """A simple, intermediate subpath. Simply forwards all calls to the next
     part of the record path."""
     def rp_eval(self, record):
-        return self._next_subpath.rp_eval(getattr(record, self._subpath_attr))
-
-    def rp_exists(self, record):
         try:
-            return self._next_subpath.rp_exists(getattr(
-                record, self._subpath_attr))
+            return self._next_subpath.rp_eval(
+                getattr(record, self._subpath_attr))
         except AttributeError:
-            return False
+            return []
 
     def rp_map(self, record, func, *args):
         self._next_subpath.rp_map(getattr(record, self._subpath_attr), func,
@@ -2221,16 +2214,14 @@ class _RP_LeafSubpath(_ARP_Subpath):
     """The final part of a record path. This the part that actually gets and
     sets values."""
     def rp_eval(self, record):
-        return [getattr(record, self._subpath_attr)]
-
-    def rp_exists(self, record):
-        return getattr(record, self._subpath_attr, None) is not None
+        att = getattr(record, self._subpath_attr)
+        return [att] if att is not None else [] ## FIXME TTT can be a MelObject?
 
     def rp_map(self, record, func, *args):
         s_attr = self._subpath_attr
         attr = getattr(record, s_attr)
         if attr:
-            setattr(record, s_attr, func(*(args + (attr,)))) # Py3: args
+            setattr(record, s_attr, func(*(*args, attr)))
 
     def __repr__(self):
         return self._subpath_attr
@@ -2247,13 +2238,6 @@ class _RP_IteratedSubpath(_ARP_Subpath):
         eval_next = self._next_subpath.rp_eval
         return chain.from_iterable(eval_next(iter_attr) for iter_attr
                                    in getattr(record, self._subpath_attr))
-
-    def rp_exists(self, record):
-        next_exists = self._next_subpath.rp_exists
-        for iter_attr in getattr(record, self._subpath_attr):
-            if next_exists(iter_attr):
-                return True # short-circuit
-        return False
 
     def rp_map(self, record, func, *args):
         map_next = self._next_subpath.rp_map
@@ -2302,11 +2286,6 @@ class RecPath(object):
         """Evaluates this record path for the specified record, returning a
         list of all attribute values that it resolved to."""
         return self._root_subpath.rp_eval(record)
-
-    def rp_exists(self, record):
-        """Returns True if this record path will resolve to a non-empty list
-        for the specified record."""
-        return self._root_subpath.rp_exists(record)
 
     def rp_map(self, record, func, *args):
         """Maps the specified function over all the values that this record
