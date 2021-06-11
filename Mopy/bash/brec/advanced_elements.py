@@ -883,7 +883,7 @@ class MelUnion(MelBase):
             element.getDefaulters(mel_set_instance)
         if self.fallback:
             self.fallback.getDefaulters(mel_set_instance)
-        # fixme -> still needed??
+        # FIXME(480) -> still needed??
         # This is somewhat hacky. We let all FormID elements set their defaults
         # afterwards so that records have integers if possible, otherwise
         # mapFids will blow up on unions that haven't been loaded, but contain

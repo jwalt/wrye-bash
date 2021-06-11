@@ -1201,8 +1201,7 @@ class _UsesEffectsMixin(_HandleAliases):
             actorvalue = actorValueNumber_Name.get(actorvalue,actorvalue)
             output.append(effectFormat % (
                 efname,magnitude,area,duration,range_,actorvalue))
-            if effect.scriptEffect: ##: #480 - setDefault commit - return None
-                se = effect.scriptEffect
+            if se := effect.scriptEffect: # should evaluate to False if empty
                 longid, seschool, sevisual, seflags, sename = \
                     se.script_fid, se.school, se.visual, se.flags, se.full
                 sevisual = u'NONE' if sevisual == null4 else sig_to_str(

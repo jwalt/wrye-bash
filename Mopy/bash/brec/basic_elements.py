@@ -53,10 +53,19 @@ class MelObject(object):
             type_other.__slots__ or any(
             getattr(self, a) != getattr(other, a) for a in type_self.__slots__)
 
-    def __hash__(self):  # FIXME: slow, cache?
+    def __hash__(self):  # TODO: slow
         return hash(_make_hashable(
-            {k: g for k, g in ((a, getattr(self, a)) for a in self.__slots__)
-             if g is not None}))
+            [(k, g) for k, g in ((a, getattr(self, a)) for a in self.__slots__)
+             if g is not None]))
+
+    def __bool__(self):  # FIXME test / iterate over mro slots??
+        for a in self.__slots__:
+            try:
+                object.__getattribute__(self, a)
+                return True
+            except AttributeError:
+                pass
+        return False
 
     def __repr__(self):
         """Carefully try to show as much info about ourselves as possible."""
@@ -629,9 +638,9 @@ class MelStruct(MelBase):
     def getDefaulters(self, mel_set_instance):
         defaultrs = mel_set_instance.defaulters
         common_attrs = set(self.attrs) & set(defaultrs)
-        dups = common_attrs & set((a, defaultrs[a], dflt) for a, dflt in
-                                  zip(self.attrs, self.defaults) if
-                                  a in common_attrs and defaultrs[a] != dflt)
+        dups = set((a, defaultrs[a], dflt) for a, dflt in
+                   zip(self.attrs, self.defaults) if
+                   a in common_attrs and defaultrs[a] != dflt)
         if dups:
             raise SyntaxError(f'{self} duplicate attr(s) {dups}')
         for attr,value,action in zip(self.attrs, self.defaults, self.actions):
