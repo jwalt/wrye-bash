@@ -2246,12 +2246,11 @@ class DnDStatusBar(wx.StatusBar):
     def OnDragEnd(self, event):
         if self.dragging != wx.NOT_FOUND:
             try:
-                if self.moved:
-                    for button in self.buttons:
-                        if button._native_widget.HasCapture():
-                            button._native_widget.ReleaseMouse()
-                            break
-                    # else: button = None
+                for button in self.buttons:
+                    if button._native_widget.HasCapture():
+                        button._native_widget.ReleaseMouse()
+                        break
+                # else: button = None
             except:
                 # deprint(u'Exception while handling mouse up on button',
                 #         traceback=True)
