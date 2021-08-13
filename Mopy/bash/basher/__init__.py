@@ -3901,6 +3901,7 @@ class BashFrame(WindowFrame):
         bass.update_sys_argv([u'--no-uac'])
         # restart
         bass.is_restarting = True
+        # Link.Frame.notebook.ReleaseMouse()
         self.close_win(True)
 
     def set_bash_frame_title(self):

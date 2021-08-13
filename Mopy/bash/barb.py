@@ -379,3 +379,7 @@ class RestoreSettings(object):
             _(u'There was an error while trying to restore your settings from '
               u'the backup file!'), msg, _(u'No settings were restored.')]),
                           _(u'Unable to restore backup!'))
+
+"""
+
+"""

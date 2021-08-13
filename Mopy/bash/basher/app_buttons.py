@@ -734,7 +734,9 @@ class App_Restart(StatusBar_Button):
             staticBitmap(window, special=u'undo', size=(iconSize, iconSize)),
             onRClick)
 
-    def Execute(self): Link.Frame.Restart()
+    def Execute(self):
+        Link.Frame.Restart()
+        return EventResult.FINISH
 
 #------------------------------------------------------------------------------
 class App_PluginChecker(StatusBar_Button):

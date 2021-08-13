@@ -2251,6 +2251,7 @@ class DnDStatusBar(wx.StatusBar):
                         if button._native_widget.HasCapture():
                             button._native_widget.ReleaseMouse()
                             break
+                    # else: button = None
             except:
                 # deprint(u'Exception while handling mouse up on button',
                 #         traceback=True)
@@ -2260,6 +2261,7 @@ class DnDStatusBar(wx.StatusBar):
             if self.moved:
                 self.moved = False
                 return
+        # if not button._tip == _('Restart'): event.Skip() XXX
         event.Skip()
 
     def OnDrag(self, event):
