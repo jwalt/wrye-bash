@@ -1034,17 +1034,17 @@ class Installer(ListInfo):
         return self.status != oldStatus or self.underrides != oldUnderrides
 
     #--Utility methods --------------------------------------------------------
-    def packToArchive(self, project, archive, isSolid, blockSize,
-            progress=None, release=False):
+    def packToArchive(self, project, archive_path, isSolid, blockSize,
+                      progress=None, release=False):
         """Packs project to build directory. Release filters out development
         material from the archive. Needed for projects and to repack archives
         when syncing from Data."""
         length = len(self.fileSizeCrcs)
         if not length: return
-        archive, archiveType, solid = compressionSettings(archive, blockSize,
-                                                          isSolid)
+        archive_path, archiveType, solid = compressionSettings(
+            archive_path, blockSize, isSolid)
         outDir = bass.dirs[u'installers']
-        realOutFile = outDir.join(archive)
+        realOutFile = outDir.join(archive_path)
         outFile = outDir.join(u'bash_temp_nonunicode_name.tmp')
         num = 0
         while outFile.exists():
@@ -1071,7 +1071,7 @@ class Installer(ListInfo):
                 # here - the third argument will be shown to the user, so we
                 # show the final archive name instead of the temp one we're
                 # internally using.
-                compress7z(command, outFile, archive, projectDir, progress)
+                compress7z(command, outFile, archive_path, projectDir, progress)
             finally:
                 self.tempList.remove()
             outFile.moveTo(realOutFile)
