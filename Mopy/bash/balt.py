@@ -671,6 +671,8 @@ class TabDragMixin(object):
                 self.__dragX = pos[0]
                 self.__justSwapped = wx.NOT_FOUND
                 self.CaptureMouse()
+        from .gui import debug_events
+        if debug_events: deprint(f'skipping {event=}')
         event.Skip()
 
     def __OnDragEndForced(self, _event):
@@ -689,6 +691,8 @@ class TabDragMixin(object):
                 # wxWindowBase::ReleaseMouse(): attempt to release mouse,
                 # but this window hasn't captured it
                 pass
+        from .gui import debug_events
+        if debug_events: deprint(f'skipping {event=}')
         event.Skip()
 
     def __OnDragging(self, event):
@@ -2162,6 +2166,8 @@ class INIListCtrl(wx.ListCtrl):
             self._contents.EnsureVisible(iniLine)
             scroll = iniLine - self._contents.GetScrollPos(wx.VERTICAL) - index
             self._contents.ScrollLines(scroll)
+        from .gui import debug_events
+        if debug_events: deprint(f'skipping {event=}')
         event.Skip()
 
     def fit_column_to_header(self, column):
@@ -2241,6 +2247,8 @@ class DnDStatusBar(wx.StatusBar):
             # loss of mouse capture.
             self.dragging = wx.NOT_FOUND
             self.SetCursor(wx.Cursor(wx.CURSOR_ARROW))
+        from .gui import debug_events
+        if debug_events: deprint(f'skipping {event=}')
         event.Skip()
 
     def OnDragEnd(self, event):
@@ -2283,6 +2291,8 @@ class DnDStatusBar(wx.StatusBar):
                 self.dragging = over
                 # Refresh button positions
                 self.OnSize()
+        from .gui import debug_events
+        if debug_events: deprint(f'skipping {event=}')
         event.Skip()
 
     def OnSize(self, event=None):
@@ -2291,7 +2301,10 @@ class DnDStatusBar(wx.StatusBar):
         for button in self.buttons:
             button.component_position = (xPos, yPos)
             xPos += self.iconsSize
-        if event: event.Skip()
+        if event:
+            from .gui import debug_events
+            if debug_events: deprint(f'skipping {event=}')
+            event.Skip()
 
 #------------------------------------------------------------------------------
 class NotebookPanel(PanelWin):

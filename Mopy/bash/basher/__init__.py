@@ -3664,6 +3664,8 @@ class BashNotebook(wx.Notebook, balt.TabDragMixin):
             menu = self.tabLinks(Links())
             menu.popup_menu(self, None)
         else:
+            from ..gui import debug_events
+            if debug_events: deprint(f'skipping {event=}')
             event.Skip()
 
     def drag_tab(self, newPos):
@@ -3696,6 +3698,8 @@ class BashNotebook(wx.Notebook, balt.TabDragMixin):
                 self.GetPage(event.GetSelection()).GetId()]
             self.currentPage.ShowPanel(
                 refresh_target=load_order.using_ini_file())
+            from ..gui import debug_events
+            if debug_events: deprint(f'skipping {event=}')
             event.Skip() ##: shouldn't this always be called ?
 
 #------------------------------------------------------------------------------
