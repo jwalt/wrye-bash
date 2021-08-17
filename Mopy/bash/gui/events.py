@@ -114,6 +114,8 @@ from enum import Enum
 from ..exception import UnknownListener, ListenerBound
 # no other imports, everything else needs to be able to import this
 
+debug_events = True
+
 def null_processor(_event):
     """Argument processor that simply discards the event."""
     return []
@@ -174,7 +176,12 @@ class EventHandler(object):
 
         :param event: The event that occurred."""
         listener_args = self._arg_processor(event)
+        if debug_events:
+            from .. import bolt
+            bolt.deprint(f'{event=} - {listener_args=}')
         for listener in self._listeners:
+            if debug_events:
+                bolt.deprint(f'{listener=}')
             result = listener(*listener_args)
             # result will be None if method didn't return anything
             if result is None or result is EventResult.CONTINUE:
@@ -193,6 +200,7 @@ class EventHandler(object):
                 raise RuntimeError(u'Incorrect return value (%r) for '
                                    u'EventHandler listener.' % result)
         # Need to propagate it up the wx chain
+        if debug_events: bolt.deprint(f'skipping {event}')
         event.Skip()
 
     def subscribe(self, listener):

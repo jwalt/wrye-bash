@@ -3895,8 +3895,15 @@ class BashFrame(WindowFrame):
         :param args: tuple of lists of command line args - use the *long*
                      options, for instance --Language and not -L
         """
+        from ..gui import debug_events
+        debug_events = True
         for arg in args:
             bass.update_sys_argv(arg)
+        if debug_events:
+            from ..bass import sys_argv
+            deprint(f'{sys_argv=}')
+            if '-d' in sys_argv: sys_argv.remove('-d')
+            if '--debug' in sys_argv: sys_argv.remove('--debug')
         #--Restarting, assume users don't want to be prompted again about UAC
         bass.update_sys_argv([u'--no-uac'])
         # restart
