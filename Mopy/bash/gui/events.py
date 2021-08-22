@@ -152,6 +152,7 @@ class EventHandler(object):
     """This class implements the actual event processing, catching native wx
     events, applying processors to them and posting the results to all relevant
     listeners."""
+    do_handle = True
     def __init__(self, wx_owner, wx_event_id, arg_processor):
         """Creates a new EventHandler wrapping the specified wx event.
 
@@ -175,6 +176,7 @@ class EventHandler(object):
         the listener and reacts accordingly.
 
         :param event: The event that occurred."""
+        if not self.do_handle: return
         listener_args = self._arg_processor(event)
         if debug_events:
             from .. import bolt
@@ -200,8 +202,20 @@ class EventHandler(object):
                 raise RuntimeError(u'Incorrect return value (%r) for '
                                    u'EventHandler listener.' % result)
         # Need to propagate it up the wx chain
-        if debug_events: bolt.deprint(f'skipping {event}')
+        self._skip(event)
+
+    def _skip(self, event):
+        if not self.do_handle: return
+        if debug_events:
+            from .. import bolt
+            bolt.deprint(f'skipping {event}')
         event.Skip()
+
+    @classmethod
+    def stop_skipping(cls):
+        from .. import bolt
+        cls.do_handle = False
+        bolt.deprint(f'{cls.do_handle=}')
 
     def subscribe(self, listener):
         """Subscribes the specified listener to this event handler. The order

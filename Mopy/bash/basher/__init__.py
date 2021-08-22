@@ -84,7 +84,7 @@ from ..gui import Button, CancelButton, HLayout, Label, LayoutOptions, \
     Picture, ImageWrapper, CenteredSplash, BusyCursor, RadioButton, \
     GlobalMenu, CopyOrMovePopup, ListBox, ClickableImage, CENTER, \
     MultiChoicePopup, WithMouseEvents, read_files_from_clipboard_cb, \
-    get_shift_down, FileOpen
+    get_shift_down, FileOpen, EventHandler
 
 # Constants -------------------------------------------------------------------
 from .constants import colorInfo, settingDefaults, installercons
@@ -4127,11 +4127,14 @@ class BashFrame(WindowFrame):
             # Save sizes here, in the finally clause position is not saved - todo PY3: test if needed
             super(BashFrame, self).on_closing(destroy=False)
             self.bind_refresh(bind=False)
+            balt.bind_refresh = False
             self.SaveSettings(destroy=True)
         except:
                 deprint(u'An error occurred while trying to save settings:',
                         traceback=True)
         finally:
+            import wx
+            wx.CallAfter(EventHandler.stop_skipping)
             self.destroy_component()
 
     def SaveSettings(self, destroy=False):

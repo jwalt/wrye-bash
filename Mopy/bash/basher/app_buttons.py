@@ -720,8 +720,10 @@ class App_Settings(StatusBar_Button):
         return super(App_Settings, self).GetBitmapButton(
             window, image, lambda: self.Execute())
 
+    @balt.conversation
     def Execute(self):
         SettingsDialog.display_dialog()
+        # return EventResult.FINISH
 
 #------------------------------------------------------------------------------
 class App_Restart(StatusBar_Button):

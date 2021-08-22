@@ -125,6 +125,7 @@ class SettingsDialog(DialogWindow):
                         u' - %s' % r for r in sorted(self._requesting_restart))
                     + u'\n\n' + _(u'Do you want to restart now?'),
                     title=_(u'Restart Wrye Bash')):
+                balt.bind_refresh = False
                 Link.Frame.Restart(*self._restart_params)
             else:
                 # User denied the restart, don't bother them again
@@ -955,6 +956,7 @@ class BackupsPage(_AFixedPage):
                 bass.sys_argv.remove(u'--backup')
             except ValueError:
                 pass
+            balt.bind_refresh = False
             Link.Frame.Restart([u'--restore'], [u'--filename', backup_dir.s])
         except exception.BoltError as e:
             deprint(u'Restore settings failed:', traceback=True)

@@ -810,6 +810,7 @@ class Progress(bolt.Progress):
 #------------------------------------------------------------------------------
 _depth = 0
 _lock = threading.Lock() # threading not needed (I just can't omit it)
+bind_refresh = True # used to avoid binding RefreshData when bash shuts down
 def conversation(func):
     """Decorator to temporarily unbind RefreshData Link.Frame callback."""
     @wraps(func)
@@ -822,7 +823,8 @@ def conversation(func):
         finally:
             with _lock: # atomic
                 _depth -= 1
-                if not _depth and refresh_bound:
+                if not _depth and refresh_bound and bind_refresh:
+                    deprint('binding refresh')
                     Link.Frame.bind_refresh(bind=True)
     return _conversation_wrapper
 
