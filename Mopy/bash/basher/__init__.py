@@ -3839,7 +3839,8 @@ class BashFrame(WindowFrame):
                                         sizes_dict=bass.settings)
         self.set_bash_frame_title()
         # Status Bar & Global Menu
-        self._native_widget.SetStatusBar(BashStatusBar(self._native_widget))
+        self.bar = BashStatusBar(self._native_widget)
+        self._native_widget.SetStatusBar(self.bar)
         self.global_menu = None
         self.set_global_menu(GlobalMenu())
         #--Notebook panel

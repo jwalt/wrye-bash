@@ -2194,6 +2194,7 @@ class DnDStatusBar(wx.StatusBar):
         self.dragging = wx.NOT_FOUND
         self.dragStart = 0
         self.moved = False
+        self.handle_drag = True
 
     def UpdateIconSizes(self, skip_refresh=False): raise AbstractError
     def GetLink(self,uid=None,index=None,button=None): raise AbstractError
@@ -2254,7 +2255,7 @@ class DnDStatusBar(wx.StatusBar):
         event.Skip()
 
     def OnDragEnd(self, event):
-        if self.dragging != wx.NOT_FOUND:
+        if self.dragging != wx.NOT_FOUND: # self.handle_drag and
             try:
                 for button in self.buttons:
                     if button._native_widget.HasCapture():
@@ -2274,11 +2275,11 @@ class DnDStatusBar(wx.StatusBar):
         event.Skip()
 
     def OnDrag(self, event):
-        if self.dragging != wx.NOT_FOUND:
+        if self.handle_drag and self.dragging != wx.NOT_FOUND: #
             if abs(event.GetPosition()[0] - self.dragStart) > 4:
                 self.SetCursor(wx.Cursor(wx.CURSOR_HAND))
             over = self._getButtonIndex(event)
-            if over not in (wx.NOT_FOUND, self.dragging):
+            if over not in (wx.NOT_FOUND, self.dragging): ##: triggered even when clicking on say Settings button
                 self.moved = True
                 button = self.buttons[self.dragging]
                 # update settings

@@ -722,7 +722,11 @@ class App_Settings(StatusBar_Button):
 
     @balt.conversation
     def Execute(self):
-        SettingsDialog.display_dialog()
+        try:
+            Link.Frame.bar.handle_drag = False
+            SettingsDialog.display_dialog()
+        finally:
+            Link.Frame.bar.handle_drag = True
         # return EventResult.FINISH
 
 #------------------------------------------------------------------------------
