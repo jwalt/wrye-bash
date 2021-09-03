@@ -46,6 +46,7 @@ from functools import partial
 from itertools import chain
 from keyword import iskeyword
 from operator import attrgetter
+from typing import MutableSequence
 from urllib.parse import quote
 
 import chardet
@@ -1385,6 +1386,42 @@ class PickleDict(object):
         return True
 
 #------------------------------------------------------------------------------
+dynamic_sets = set()
+def clean_settings(setts_dict, default_settings,
+                   __mutable_types = (MutableSequence, dict),
+                   __not_in_defaults=('colWidths', 'colReverse', 'badDlls',
+                                      'goodDlls', 'renames'),
+                   __dynamic_setts=('.continue', )):
+    """Recursively clean settings from keys missing from default settings, then
+    add missing keys from the defaults. Avoid nesting too much - if the type of
+    a value changes special treatment would be needed - don't do it.
+    `__not_in_defaults` contains suffixes of keys of settings with dict value
+    type that are empty by default. `__dynamic_setts` contains suffixes of
+    settings that are set dynamically
+    """
+    if isinstance(setts_dict, dict):
+        for sett_key in list(setts_dict):
+            if sett_key not in default_settings:
+                deprint(sett_key)
+                dynamic_sets.add(sett_key)
+                if not sett_key.endswith(
+                        __dynamic_setts):
+                    del setts_dict[sett_key]
+                    continue
+            if sett_key.endswith(__not_in_defaults):
+                continue
+            sett_val = setts_dict[sett_key]
+            setts_dict[sett_key] = clean_settings(sett_val,
+                                                  default_settings[sett_key])
+        miss = set(default_settings) - set(setts_dict)
+        for k in miss:
+            setts_dict[k] = copy.deepcopy(def_val) if isinstance(
+                def_val := default_settings[k], __mutable_types) else def_val
+        return setts_dict
+    else:
+        return copy.deepcopy(setts_dict) if isinstance(
+            setts_dict, __mutable_types) else setts_dict
+
 class Settings(DataDict):
     """Settings/configuration dictionary with persistent storage.
 

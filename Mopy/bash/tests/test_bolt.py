@@ -25,7 +25,7 @@ from collections import OrderedDict
 import pytest
 
 from ..bolt import LowerDict, DefaultLowerDict, OrderedLowerDict, decoder, \
-    encode, getbestencoding, GPath, Path, Rounder
+    encode, getbestencoding, GPath, Path, Rounder, clean_settings
 
 def test_getbestencoding():
     """Tests getbestencoding. Keep this one small, we don't want to test
@@ -455,3 +455,41 @@ class TestRounder(object):
         assert not (rounder_5th == None)
         assert not (rounder_5th == True)
         assert not (rounder_5th == 55)
+
+def test_clean_settings():
+    setts = {'a': 1, 'b': 2}
+    default_setts = {'a': 1, 'b': 2}
+    assert clean_settings(setts, default_setts) == setts, 'no changes'
+    default_setts = {'a': 1, 'b': 3}
+    assert clean_settings(setts, default_setts) == setts, 'no key changes'
+    assert clean_settings({}, default_setts) == default_setts, \
+        'populating settings from defaults'
+    assert clean_settings({'a': 1}, default_setts) == default_setts, \
+        'adding settings from defaults'
+    assert clean_settings(setts,  {'a': 1}) == {'a': 1}, \
+        'remove settings not in defaults'
+    setts = {'a': 1, 'b': [2]}
+    default_setts = {'a': 1, 'b': [3]}
+    assert (mod_sets := clean_settings(setts, default_setts)) == setts, \
+        'list settings - keep setting ones'
+    # check we do not modify defaults
+    mod_sets['b'].append(3)
+    assert default_setts['b'] == [3], 'check defaults not modified'
+    # dicts
+    setts = {'a': 1, 'b': {'a': 'setts_val', 'removed': 2}}
+    default_setts = {'a': 1, 'b': {'a': 'default_val'}}
+    assert clean_settings(setts, default_setts) == {'a': 1,
+                                                    'b': {'a': 'setts_val'}}, \
+        'remove settings not in defaults (nested)'
+    setts = {'a': 1, 'b': {'a': 'setts_val'}}
+    default_setts = {'a': 1, 'b': {'a': 'default_val', 'added': 2}}
+    assert (mod_sets := clean_settings(setts, default_setts)) == {
+        'a': 1, 'b': {'a': 'setts_val', 'added': 2}}, \
+        'add settings not in defaults (nested)'
+    mod_sets['b']['a'] = 'new_val'
+    assert default_setts['b']['a'] == 'default_val', \
+            'check defaults not modified (nested)'
+    setts = {'a': 1, 'colReverse': {'mods': True}}
+    default_setts = {'a': 1, 'colReverse': {}}
+    assert (clean_settings(setts, default_setts)) == setts, \
+        "don't clean special keys"
