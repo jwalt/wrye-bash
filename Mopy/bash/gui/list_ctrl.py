@@ -26,6 +26,7 @@ mods, saves, inis, installers etc"""
 __author__ = u'Lojack, Utumno'
 
 import pickle
+from typing import Type
 
 import wx as _wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
@@ -195,6 +196,7 @@ class UIListCtrl(WithMouseEvents, WithCharEvents):
     Events:
       - on_item_selected(uilist_item_key): on clicking on an item on the list -
       type of uilist_item_key varies, usually a Path
+    :type _native_widget: _DragListCtrl
     """
     bind_motion = True
     bind_mouse_leaving = bind_lclick_double = bind_lclick_down = True
@@ -202,6 +204,7 @@ class UIListCtrl(WithMouseEvents, WithCharEvents):
 
     def __init__(self, parent, allow_edit, is_border_sunken, is_single_cell,
             *args, **kwargs):
+        """:type _native_widget: _wx_widget_type"""
         kwargs['style'] = _wx.LC_REPORT | (allow_edit and _wx.LC_EDIT_LABELS
             ) | (is_border_sunken and _wx.BORDER_SUNKEN) | (
                 is_single_cell and _wx.LC_SINGLE_SEL)
