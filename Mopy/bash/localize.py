@@ -34,8 +34,10 @@ import re
 import subprocess
 import sys
 import time
+from functools import update_wrapper
 
 # Minimal local imports - needs to be imported early in bash
+
 from . import bass, bolt
 
 def __init_gui_images(_wx):
@@ -73,6 +75,18 @@ def set_c_locale():
 
 #------------------------------------------------------------------------------
 # Locale Detection & Setup
+if sys.platform.startswith('win'):
+    # monkey patch getlocale
+    def _monkey_getlocale(category=locale.LC_CTYPE):
+        # taken from original - omit the call to
+        localename = locale._setlocale(category)
+        if category == locale.LC_ALL and ';' in localename:
+            raise TypeError('category LC_ALL is not supported')
+        return locale.normalize(localename) # omit the rest of _parse_localename
+
+    _std_getlocale = locale.getlocale
+    locale.getlocale = update_wrapper(_monkey_getlocale, locale.getlocale)
+
 def setup_locale(cli_lang, _wx):
     """Set up wx Locale and Wrye Bash translations. If cli_lang is given,
     will validate it is a supported wx language code, otherwise will fallback
@@ -156,7 +170,8 @@ def setup_locale(cli_lang, _wx):
     lang_info = _wx.Locale.FindLanguageInfo(target_name)
     target_language = lang_info.Language
     target_locale = _wx.Locale(target_language)
-    bolt.deprint(f"Set wxPython locale to '{target_name}'")
+    bolt.deprint(f"Set wxPython locale to '{target_name}: getlocale result "
+                 f"{locale.getlocale()}'")
     # Next, set the Wrye Bash locale based on the one we grabbed from wx
     if po is mo is None:
         # We're using English or don't have a translation file - either way,
