@@ -23,11 +23,9 @@
 """Houses classes for reading, manipulating and writing groups of records."""
 
 # Python imports
-from __future__ import division, print_function
-
 import io
 from collections import deque
-from itertools import chain, izip
+from itertools import chain
 from operator import itemgetter, attrgetter
 
 # Wrye Bash imports
@@ -395,7 +393,7 @@ class MobObjects(MobBase):
         return iter(self.records)
 
     def __repr__(self):
-        return u'<%s GRUP: %u record(s)>' % (self.label, len(self.records))
+        return f'<{self.label} GRUP: {len(self.records)} record(s)>'
 
 #------------------------------------------------------------------------------
 ##: MobDial, MobCell and MobWorld need a base class; same with MobDials,
@@ -589,8 +587,7 @@ class MobDial(MobObjects):
         self.records = sorted_infos
 
     def __repr__(self):
-        return u'<DIAL (%r): %u INFO record(s)>' % (self.dial,
-                                                    len(self.records))
+        return f'<DIAL ({self.dial!r}): {len(self.records)} INFO record(s)>'
 
 class MobDials(MobBase):
     """DIAL top block of mod file."""
@@ -778,7 +775,7 @@ class MobDials(MobBase):
                 dest_dial.updateRecords(src_dial, mergeIds)
 
     def __repr__(self):
-        return u'<DIAL GRUP: %u record(s)>' % len(self.dialogues)
+        return f'<DIAL GRUP: {len(self.dialogues)} record(s)>'
 
 #------------------------------------------------------------------------------
 class MobCell(MobBase):
@@ -985,8 +982,8 @@ class MobCell(MobBase):
         u'distant_refs')):
         """Updates any records in 'self' that exist in 'srcBlock'."""
         mergeDiscard = mergeIds.discard
-        self_src_attrs = list(izip(__attrget(self), __attrget(srcBlock)))
-        for attr, (myRecord, record) in izip((u'cell', u'pgrd', u'land'),
+        self_src_attrs = list(zip(__attrget(self), __attrget(srcBlock)))
+        for attr, (myRecord, record) in zip((u'cell', u'pgrd', u'land'),
                                              self_src_attrs):
             if myRecord and record:
                 src_rec_fid = record.fid
@@ -997,7 +994,7 @@ class MobCell(MobBase):
                     record = record.getTypeCopy()
                     setattr(self, attr, record)
                     mergeDiscard(src_rec_fid)
-        for attr, (self_rec_list, src_rec_list) in izip(
+        for attr, (self_rec_list, src_rec_list) in zip(
                 (u'persistent_refs', u'temp_refs', u'distant_refs'),
                 self_src_attrs[3:]):
             fids = {record.fid: i for i, record in enumerate(self_rec_list)}
