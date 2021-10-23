@@ -26,46 +26,22 @@ implementations for the current OS."""
 
 import platform
 import shutil
+from ..bolt import Path, GPath, deprint
+from ..exception import CancelError, DirectoryFileCollisionError, \
+    NonExistentDriveError
 # First import the shared API
 from .common import *
 
 # Then check which OS we are running on and import *only* from there
+shfo = None
 if platform.system() == u'Windows':
     from .windows import *
 elif platform.system() == u'Linux':
     from .linux import *
 else:
-    raise ImportError(u'Wrye Bash does not support %s yet' % platform.system())
+    from .linux import * # raise ImportError(u'Wrye Bash does not support %s yet' % platform.system())
 
-##: Internals that could not easily be split between windows.py and linux.py
-##: due to dependencies on constants that only exist in windows, but we
-##: use as values for our generic versions.
-try:
-    from win32com.shell import shell, shellcon
-except ImportError:
-    shell = shellcon = None
-
-from ..bolt import deprint, Path
-from ..exception import CancelError, SkipError, AccessDeniedError, \
-    DirectoryFileCollisionError, FileOperationError
-
-# NOTE(lojack): AccessDenied can be a result of many error codes,
-# According to
-# https://msdn.microsoft.com/en-us/library/windows/desktop/bb762164%28v=vs.85%29.aspx
-# If you recieve an error code not on that list, then you assume it is one of
-# the default WinError.h error codes, in this case 5 is `ERROR_ACCESS_DENIED`.
-# I actually DO get error code 5, when the game detection for WS games wasn't
-# including the language directories (which caused us to attempt one directory
-# too high in the tree).
-_file_op_error_map = {
-    # Returned for Windows Store games that need admin access
-    5: AccessDeniedError,    # ERROR_ACCESS_DENIED
-    17: AccessDeniedError,   # ERROR_INVALID_ACCESS
-    120: AccessDeniedError,  # DE_ACCESSDENIEDSRC -> source AccessDenied
-    # https://msdn.microsoft.com/en-us/library/windows/desktop/ms681383%28v=vs.85%29.aspx
-    1223: CancelError,
-}
-
+# File operations WIP ---------------------------------------------------------
 def __copyOrMove(operation, source, target, renameOnCollision, parent):
     """WIP shutil move and copy adapted from #96"""
     # renameOnCollision - if True auto-rename on moving collision, else ask
@@ -131,42 +107,12 @@ def _fileOperation(operation, source, target=None, allowUndo=True,
         target = [abspath(u'%s' % target)]
     else:
         target = [abspath(u'%s' % x) for x in target]
-    _source = source; _target = target
-    if __shell and shell is not None:
-        # flags
-        flgs = shellcon.FOF_WANTMAPPINGHANDLE # enables mapping return value !
-        flgs |= FOF_NOCONFIRMMKDIR # never ask user for creating dirs
-        flgs |= (len(target) > 1) * shellcon.FOF_MULTIDESTFILES
-        if allowUndo: flgs |= shellcon.FOF_ALLOWUNDO
-        if not confirm: flgs |= shellcon.FOF_NOCONFIRMATION
-        if renameOnCollision: flgs |= shellcon.FOF_RENAMEONCOLLISION
-        if silent: flgs |= shellcon.FOF_SILENT
-        # null terminated strings
-        source = u'\x00'.join(source) # nope: + u'\x00'
-        target = u'\x00'.join(target)
-        # get the handle to parent window to feed to win api
-        parent = parent.GetHandle() if parent else None
-        # See SHFILEOPSTRUCT for deciphering return values
-        # result: a windows error code (or 0 for success)
-        # aborted: True if any operations aborted, False otherwise
-        # mapping: maps the old and new names of the renamed files
-        result, aborted, mapping = shell.SHFileOperation(
-                (parent, operation, source, target, flgs, None, None))
-        if result == 0:
-            if aborted: raise SkipError()
-            return dict(mapping)
-        elif result == 2 and operation == FO_DELETE:
-            # Delete failed because file didnt exist
-            return dict(mapping)
-        else:
-            if result == 124:
-                deprint(u'Invalid paths:\nsource: %s\ntarget: %s\nRetrying' % (
-                    source.replace(u'\x00', u'\n'),
-                    target.replace(u'\x00', u'\n')))
-                return _fileOperation(operation, _source, _target, allowUndo,
-                                      confirm, renameOnCollision, silent,
-                                      parent, __shell=False)
-            raise _file_op_error_map.get(result, FileOperationError(result))
+    if __shell and shfo is not None:
+        res = shfo(operation, source, target, allowUndo, confirm,
+                   renameOnCollision, silent, parent)
+        return _fileOperation(operation, source, target, allowUndo, confirm,
+                              renameOnCollision, silent, parent,
+                              __shell=False) if res is None else res
     else: # Use custom dialogs and such
         from .. import balt # TODO(ut): local import, env should be above balt...
         source = [GPath(s) for s in source]
@@ -227,17 +173,15 @@ def shellCopy(filesFrom, filesTo, parent=None, askOverwrite=False,
 
 def shellMakeDirs(dirs, parent=None):
     if not dirs: return
-    dirs = [dirs] if not isinstance(dirs, (list, tuple, set)) else dirs
     #--Skip dirs that already exist
     dirs = [x for x in dirs if not x.exists()]
     #--Check for dirs that are impossible to create (the drive they are
-    #  supposed to be on doesn't exist
-    def _filterUnixPaths(path):
-        return (os.name != u'posix' and not path.s.startswith(u'\\')
-                and not path.drive().exists())
-    errorPaths = [d for d in dirs if _filterUnixPaths(d)]
+    #  supposed to be on doesn't exist)
+    errorPaths = [d for d in dirs if not drive_exists(d)]
     if errorPaths:
         raise NonExistentDriveError(errorPaths)
+    if os.name == 'posix':
+        return # drive_exists creates the directories on posix
     #--Checks complete, start working
     tempDirs, fromDirs, toDirs = [], [], []
     try:
@@ -251,11 +195,10 @@ def shellMakeDirs(dirs, parent=None):
                 tmpDir = Path.tempDir()
                 tempDirs.append(tmpDir)
                 toMake = []
-                toMakeAppend = toMake.append
                 while not folder.exists() and folder != folder.head:
                     # Need to test against dir == dir.head to prevent
                     # infinite recursion if the final bit doesn't exist
-                    toMakeAppend(folder.tail)
+                    toMake.append(folder.tail)
                     folder = folder.head
                 if not toMake:
                     continue

@@ -52,7 +52,6 @@ has its own data store)."""
 # Imports ---------------------------------------------------------------------
 #--Python
 import collections
-import io
 import os
 import sys
 import time
@@ -331,7 +330,7 @@ class MasterList(_ModsUIList):
     @property
     def cols(self):
         # using self.__class__.keyPrefix for common saves/mods masters settings
-        return settings.getChanged(self.__class__.keyPrefix + u'.cols')
+        return settings[self.__class__.keyPrefix + u'.cols']
 
     message = _(u'Edit/update the masters list? Note that the update process '
                 u'may automatically rename some files. Be sure to review the '
@@ -545,8 +544,7 @@ class MasterList(_ModsUIList):
             masterInfo = self.data_store[evt_item]
             masterInfo.set_name(newName)
             self.SetMasterlistEdited()
-            settings.getChanged(u'bash.mods.renames')[
-                masterInfo.old_name] = newName
+            settings[u'bash.mods.renames'][masterInfo.old_name] = newName
             # populate, refresh must be called last
             self.PopulateItem(itemDex=evt_index)
             return EventResult.FINISH ##: needed?
@@ -1386,10 +1384,11 @@ class _EditableMixinOnFileInfos(_EditableMixin):
 
 class _SashDetailsPanel(_DetailsMixin, SashPanel):
     """Details panel with two splitters"""
-    _ui_settings = {u'.subSplitterSashPos' : _UIsetting(lambda self: 0,
+    _ui_settings = {**SashPanel._ui_settings, **{
+        u'.subSplitterSashPos': _UIsetting(lambda self: 0,
         lambda self: self.subSplitter.get_sash_pos(),
         lambda self, sashPos: self.subSplitter.set_sash_pos(sashPos))}
-    _ui_settings.update(SashPanel._ui_settings)
+    }
 
     def __init__(self, parent):
         # call the init of SashPanel - _DetailsMixin hasn't any init
@@ -1655,7 +1654,7 @@ class ModDetails(_ModsSavesDetails):
                                      u'bash.rename.isBadFileName.continue')
                 ):
                 return ##: cancels all other changes - move to validate_filename (without the balt part)
-            settings.getChanged(u'bash.mods.renames')[oldName] = newName
+            settings[u'bash.mods.renames'][oldName] = newName
             changeName = self.panel_uilist.try_rename(modInfo, newName)
         #--Change hedr/masters?
         if changeHedr or changeMasters:
@@ -2735,10 +2734,11 @@ class InstallersDetails(_SashDetailsPanel):
     keyPrefix = u'bash.installers.details'
     defaultSashPos = - 32 # negative so it sets bottom panel's (comments) size
     minimumSize = 32 # so comments dont take too much space
-    _ui_settings = {u'.checkListSplitterSashPos' : _UIsetting(lambda self: 0,
+    _ui_settings = {**_SashDetailsPanel._ui_settings, **{
+        u'.checkListSplitterSashPos' : _UIsetting(lambda self: 0,
         lambda self: self.checkListSplitter.get_sash_pos(),
         lambda self, sashPos: self.checkListSplitter.set_sash_pos(sashPos))}
-    _ui_settings.update(_SashDetailsPanel._ui_settings)
+    }
 
     @property
     def displayed_item(self): return self._displayed_installer
@@ -2912,72 +2912,55 @@ class InstallersDetails(_SashDetailsPanel):
         if initialized: return
         else: self.infoPages[index][1] = True
         pageName = gPage.get_component_name()
-        def dumpFiles(files, header=u''):
+        def _dumpFiles(files, header=u''):
             if files:
-                buff = io.StringIO()
+                buff = []
                 files = bolt.sortFiles(files)
-                if header: buff.write(header+u'\n')
+                if header: buff.append(header)
                 for file in files:
                     oldName = installer.getEspmName(file)
-                    buff.write(oldName)
                     if oldName != file:
-                        buff.write(u' -> ')
-                        buff.write(file)
-                    buff.write(u'\n')
-                return buff.getvalue()
+                        oldName = f'{oldName} -> {file}'
+                    buff.append(oldName)
+                return buff.extend('') or '\n'.join(buff)
             elif header:
                 return header+u'\n'
             else:
                 return u''
         if pageName == u'gGeneral':
-            info = u'== '+_(u'Overview')+u'\n'
-            info += _(u'Type: ') + installer.type_string + u'\n'
-            info += installer.structure_string() + u'\n'
+            inf_ = [u'== ' + _(u'Overview'),
+                    _(u'Type: ') + installer.type_string,
+                    installer.structure_string(), installer.size_info_str()]
             nConfigured = len(installer.ci_dest_sizeCrc)
             nMissing = len(installer.missingFiles)
             nMismatched = len(installer.mismatchedFiles)
-            if installer.is_archive():
-                if installer.isSolid:
-                    if installer.blockSize:
-                        sSolid = _(u'Solid, Block Size: %d MB') % installer.blockSize
-                    elif installer.blockSize is None:
-                        sSolid = _(u'Solid, Block Size: Unknown')
-                    else:
-                        sSolid = _(u'Solid, Block Size: 7z Default')
-                else:
-                    sSolid = _(u'Non-solid')
-                info += _(u'Size: %s (%s)') % (installer.size_string(),
-                                               sSolid) + u'\n'
-            else:
-                info += _(u'Size:') + u' %s\n' % installer.size_string(
-                    marker_string=u'N/A')
-            info += (_(u'Modified:') +u' %s\n' % format_date(installer.modified),
-                     _(u'Modified:') +u' N/A\n',)[installer.is_marker()]
-            info += (_(u'Data CRC:')+u' %08X\n' % installer.crc,
-                     _(u'Data CRC:')+u' N/A\n',)[installer.is_marker()]
-            info += (_(u'Files:') + u' %s\n' % installer.number_string(
-                installer.num_of_files, marker_string=u'N/A'))
-            info += (_(u'Configured:')+u' %u (%s)\n' % (
-                nConfigured, round_size(installer.unSize)),
-                     _(u'Configured:')+u' N/A\n',)[installer.is_marker()]
-            info += (_(u'  Matched:') + u' %s\n' % installer.number_string(
+            is_mark = installer.is_marker()
+            inf_.append(_(u'Modified:') +
+                (u' %s' % format_date(installer.modified), u' N/A')[is_mark])
+            inf_.append(
+                _(u'Data CRC:') + (u' %08X' % installer.crc, u' N/A')[is_mark])
+            inf_.append(_(u'Files:') + (u' %s' % installer.number_string(
+                installer.num_of_files, marker_string=u'N/A')))
+            inf_.append(_(u'Configured:') + [u' %u (%s)' % (
+                nConfigured, round_size(installer.unSize)), u' N/A'][is_mark])
+            inf_.append(_(u'  Matched:') + u' %s' % installer.number_string(
                 nConfigured - nMissing - nMismatched, marker_string=u'N/A'))
-            info += (_(u'  Missing:')+u' %s\n' % installer.number_string(
+            inf_.append(_(u'  Missing:') + u' %s' % installer.number_string(
                 nMissing, marker_string=u'N/A'))
-            info += (_(u'  Conflicts:')+u' %s\n' % installer.number_string(
+            inf_.append(_(u'  Conflicts:') + u' %s' % installer.number_string(
                 nMismatched, marker_string=u'N/A'))
-            info += u'\n'
             #--Infoboxes
-            gPage.text_content = info + dumpFiles(
-                installer.ci_dest_sizeCrc, u'== ' + _(u'Configured Files'))
+            inf_.append(_dumpFiles(
+                installer.ci_dest_sizeCrc, u'== ' + _(u'Configured Files')))
+            gPage.text_content = u'\n'.join(inf_)
         elif pageName == u'gMatched':
-            gPage.text_content = dumpFiles(set(
+            gPage.text_content = _dumpFiles(set(
                 installer.ci_dest_sizeCrc) - installer.missingFiles -
                                            installer.mismatchedFiles)
         elif pageName == u'gMissing':
-            gPage.text_content = dumpFiles(installer.missingFiles)
+            gPage.text_content = _dumpFiles(installer.missingFiles)
         elif pageName == u'gMismatched':
-            gPage.text_content = dumpFiles(installer.mismatchedFiles)
+            gPage.text_content = _dumpFiles(installer.mismatchedFiles)
         elif pageName == u'gConflicts':
             gPage.text_content = self._idata.getConflictReport(
                 installer, u'OVER', bosh.modInfos)
@@ -2985,11 +2968,11 @@ class InstallersDetails(_SashDetailsPanel):
             gPage.text_content = self._idata.getConflictReport(
                 installer, u'UNDER', bosh.modInfos)
         elif pageName == u'gDirty':
-            gPage.text_content = dumpFiles(installer.dirty_sizeCrc)
+            gPage.text_content = _dumpFiles(installer.dirty_sizeCrc)
         elif pageName == u'gSkipped':
-            gPage.text_content = u'\n'.join((dumpFiles(
+            gPage.text_content = u'\n'.join((_dumpFiles(
                 installer.skipExtFiles, u'== ' + _(u'Skipped (Extension)')),
-                                             dumpFiles(
+                                             _dumpFiles(
                 installer.skipDirFiles, u'== ' + _(u'Skipped (Dir)'))))
 
     #--Config
@@ -3143,7 +3126,7 @@ class InstallersPanel(BashTab):
 
     @balt.conversation
     def _first_run_set_enabled(self):
-        if settings.get(u'bash.installers.isFirstRun', True):
+        if settings[u'bash.installers.isFirstRun']:
             settings[u'bash.installers.isFirstRun'] = False
             message = _(u'Do you want to enable Installers?') + u'\n\n\t' + _(
                 u'If you do, Bash will first need to initialize some data. '
@@ -3274,7 +3257,7 @@ class InstallersPanel(BashTab):
                 env.shellMove(failed, dests, parent=self._native_widget)
             try:
                 omodMoves = list(omodMoves)
-                env.shellMakeDirs(dirInstallersJoin(u'Bash', u'Failed OMODs'))
+                env.shellMakeDirs([dirInstallersJoin('Bash', 'Failed OMODs')])
                 _move_omods(omodMoves)
             except (CancelError, SkipError):
                 while balt.askYes(self, _(
@@ -3602,16 +3585,8 @@ class BashNotebook(wx.Notebook, balt.TabDragMixin):
     @staticmethod
     def _tabOrder():
         """Return dict containing saved tab order and enabled state of tabs."""
-        newOrder = settings.getChanged(u'bash.tabs.order',
-                                       BashNotebook._tabs_enabled_ordered)
-        # FIXME(inf) Backwards compatibility with <306, drop on VDATA3
-        if not isinstance(newOrder, OrderedDict): # convert, on updating to 306
-            enabled = settings.getChanged(u'bash.tabs', # deprecated -never use
-                                          BashNotebook._tabs_enabled_ordered)
-            newOrder = OrderedDict([(x, enabled[x]) for x in newOrder
-            # needed if user updates to 306+ that drops 'bash.tabs', the latter
-            # is unchanged from default and the new version also removes a panel
-                                    if x in enabled])
+        newOrder = settings.get(u'bash.tabs.order',
+                                BashNotebook._tabs_enabled_ordered)
         # append any new tabs - appends last
         newTabs = set(tabInfo) - set(newOrder)
         for n in newTabs: newOrder[n] = BashNotebook._tabs_enabled_ordered[n]
@@ -3732,16 +3707,13 @@ class BashStatusBar(DnDStatusBar):
     def UpdateIconSizes(self, skip_refresh=False):
         self.buttons = [] # will be populated with _displayed_ gButtons - g ?
         order = settings[u'bash.statusbar.order']
-        orderChanged = False
         hide = settings[u'bash.statusbar.hide']
-        hideChanged = False
         # Add buttons in order that is saved - on first run order = [] !
         for uid in order[:]:
             link = self.GetLink(uid=uid)
             # Doesn't exist?
             if link is None:
                 order.remove(uid)
-                orderChanged = True
                 continue
             # Hidden?
             if uid in hide: continue
@@ -3760,16 +3732,11 @@ class BashStatusBar(DnDStatusBar):
             # Remove any hide settings, if they exist
             if uid in hide:
                 hide.discard(uid)
-                hideChanged = True
             order.append(uid)
-            orderChanged = True
             try:
                 self._addButton(link)
             except AttributeError:
                 deprint(u'Failed to load button %r' % (uid,), traceback=True)
-        # Update settings
-        if orderChanged: settings.setChanged(u'bash.statusbar.order')
-        if hideChanged: settings.setChanged(u'bash.statusbar.hide')
         if not skip_refresh:
             self.refresh_status_bar(refresh_icon_size=True)
 
@@ -3781,20 +3748,17 @@ class BashStatusBar(DnDStatusBar):
                 button.visible = False
                 self.buttons.remove(button)
                 settings[u'bash.statusbar.hide'].add(link.uid)
-                settings.setChanged(u'bash.statusbar.hide')
                 if not skip_refresh:
                     self.refresh_status_bar()
 
     def UnhideButton(self, link, skip_refresh=False):
         uid = link.uid
         settings[u'bash.statusbar.hide'].discard(uid)
-        settings.setChanged(u'bash.statusbar.hide')
         # Find the position to insert it at
         order = settings[u'bash.statusbar.order']
         if uid not in order:
             # Not specified, put it at the end
             order.append(uid)
-            settings.setChanged(u'bash.statusbar.order')
             self._addButton(link)
         else:
             # Specified, but now factor in hidden buttons, etc
@@ -4183,25 +4147,11 @@ class BashFrame(WindowFrame):
         #--Clean rename dictionary.
         modNames = set(bosh.modInfos)
         modNames.update(bosh.modInfos.table)
-        renames = bass.settings.getChanged(u'bash.mods.renames')
+        renames = bass.settings[u'bash.mods.renames']
         # Make a copy, we may alter it in the loop
         for old_mname, new_mname in list(renames.items()):
             if new_mname not in modNames:
                 del renames[old_mname]
-        #--Clean colors dictionary
-        currentColors = set(settings[u'bash.colors'])
-        defaultColors = set(settingDefaults[u'bash.colors'])
-        invalidColors = currentColors - defaultColors
-        missingColors = defaultColors - currentColors
-        if invalidColors:
-            for key in invalidColors:
-                del settings[u'bash.colors'][key]
-        if missingColors:
-            for key in missingColors:
-                settings[u'bash.colors'][key] = settingDefaults[
-                    u'bash.colors'][key]
-        if invalidColors or missingColors:
-            settings.setChanged(u'bash.colors')
         #--Clean backup
         for fileInfos in (bosh.modInfos,bosh.saveInfos):
             goodRoots = {p.root for p in fileInfos}
@@ -4273,8 +4223,8 @@ class BashApp(object):
             splash_screen.stop_splash()
         self.bash_app.SetTopWindow(frame._native_widget)
         frame.show_frame()
+        frame.RefreshData(booting=True)
         frame.is_maximized = settings[u'bash.frameMax']
-        frame.RefreshData(booting=True) # used to bind RefreshData
         # Moved notebook.Bind() callback here as OnShowPage() is explicitly
         # called in RefreshData
         frame.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED,
@@ -4325,7 +4275,7 @@ def InitSettings(): # this must run first !
     bosh.initSettings()
     global settings
     balt._settings = bass.settings
-    balt.sizes = bass.settings.getChanged(u'bash.window.sizes', {})
+    balt.sizes = bass.settings.get(u'bash.window.sizes', {})
     settings = bass.settings
     settings.loadDefaults(settingDefaults)
     # The colors dictionary only gets copied into settings if it is missing

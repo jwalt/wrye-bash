@@ -245,14 +245,14 @@ class Mods_CreateBlank(ItemLink):
 class Mods_ListMods(ItemLink):
     """Copies list of mod files to clipboard."""
     _text = _(u'List Mods...')
-    _help = _(u'Copies list of active mod files to clipboard.')
+    _help = _(u'Copies list of active plugins to clipboard.')
 
     def Execute(self):
         #--Get masters list
         list_txt = bosh.modInfos.getModList(showCRC=get_shift_down(),
                                             showVersion=not get_ctrl_down())
         copy_text_to_clipboard(list_txt)
-        self._showLog(list_txt, title=_(u'Active Mod Files'), fixedFont=False)
+        self._showLog(list_txt, title=_(u'Active Plugins'), fixedFont=False)
 
 #------------------------------------------------------------------------------
 # Basically just a convenient 'whole LO' version of Mod_ListBashTags
@@ -425,7 +425,7 @@ class Mods_ImportBashTags(_Mods_BashTags):
         self.first_line = True
         self.plugins_imported = []
         try:
-            self.readFromText(imp_path)
+            self.read_csv(imp_path)
         except exception.BoltError:
             self._showError(_(u'The selected file is not a valid '
                               u'bash tags CSV export.'))

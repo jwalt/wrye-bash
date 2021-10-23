@@ -252,8 +252,9 @@ class Installer(ListInfo):
     def number_string(number, marker_string=u''):
         return str(number)
 
-    def size_string(self, marker_string=u''):
-        return round_size(self.fsize)
+    def size_string(self): return round_size(self.fsize)
+
+    def size_info_str(self): return  _(u'Size:') + u' %s' % self.size_string()
 
     def structure_string(self):
         if self.type == 1:
@@ -377,7 +378,7 @@ class Installer(ListInfo):
     # Those files/folders will be always skipped by refreshDataSizeCrc()
     _silentSkipsStart = (
         u'--', u'omod conversion data' + os_sep, u'wizard images' + os_sep)
-    _silentSkipsEnd = (u'thumbs.db', u'desktop.ini', u'meta.ini', u'config',
+    _silentSkipsEnd = (u'thumbs.db', u'desktop.ini', u'meta.ini',
                        u'__folder_managed_by_vortex')
 
     # global skips that can be overridden en masse by the installer
@@ -1286,7 +1287,9 @@ class InstallerMarker(Installer):
     @staticmethod
     def number_string(number, marker_string=u''): return marker_string
 
-    def size_string(self, marker_string=u''): return marker_string
+    def size_string(self): return u''
+
+    def size_info_str(self): return  _(u'Size:') + u' N/A\n'
 
     def structure_string(self): return _(u'Structure: N/A')
 
@@ -1314,6 +1317,18 @@ class InstallerArchive(Installer):
 
     @classmethod
     def is_archive(cls): return True
+
+    def size_info_str(self):
+        if self.isSolid:
+            if self.blockSize:
+                sSolid = _(u'Solid, Block Size: %d MB') % self.blockSize
+            elif self.blockSize is None:
+                sSolid = _(u'Solid, Block Size: Unknown')
+            else:
+                sSolid = _(u'Solid, Block Size: 7z Default')
+        else:
+            sSolid = _(u'Non-solid')
+        return _(u'Size: %s (%s)') % (self.size_string(), sSolid)
 
     @classmethod
     def validate_filename_str(cls, name_str, allowed_exts=archives.writeExts,
@@ -1417,7 +1432,7 @@ class InstallerArchive(Installer):
         """Unpacks archive to build directory."""
         progress = progress or bolt.Progress()
         files = bolt.sortFiles([x[0] for x in self.fileSizeCrcs])
-        if not files: return 0
+        if not files: return 0 # WARN!! - will fail on stat after
         #--Clear Project
         destDir = bass.dirs[u'installers'].join(project)
         destDir.rmtree(safety=u'Installers')
@@ -1741,7 +1756,7 @@ class InstallersData(DataStore):
         progress = progress or bolt.Progress()
         #--Archive invalidation
         from . import oblivionIni, InstallerMarker, modInfos
-        if bass.settings.get(u'bash.bsaRedirection') and oblivionIni.abs_path.exists():
+        if bass.settings[u'bash.bsaRedirection'] and oblivionIni.abs_path.exists():
             oblivionIni.setBsaRedirection(True)
         #--Load Installers.dat if not loaded - will set changed to True
         changed = not self.loaded and self.__load(progress)

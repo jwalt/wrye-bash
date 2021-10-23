@@ -597,18 +597,20 @@ class MelRecord(MreRecord):
         while not ins_at_end(endPos, self._rec_sig):
             sub_type, sub_size = unpackSubHeader(ins, self._rec_sig)
             try:
-                loaders[sub_type].load_mel(self, ins, sub_type, sub_size,
-                    self._rec_sig, sub_type)# *debug_strs
-            except KeyError:
+                loader = loaders[sub_type]
+                try:
+                    loader.load_mel(self, ins, sub_type, sub_size,
+                                    self._rec_sig, sub_type) # *debug_strs
+                except Exception as error:
+                    self.__handle_load_error(error, ins, sub_type, sub_size)
+            except KeyError: # loaders[sub_type]
                 # Wrap this error to make it more understandable
-                self.handle_load_error(exception.ModError(ins.inName,
-                    u'Unexpected subrecord: %s.%s' % (
-                        self.rec_str, sub_type.decode(u'ascii'))),
+                self.__handle_load_error(
+                    f'Unexpected subrecord: ' ##: can this fail? {sub_type!r} ?
+                    f'{self.rec_str}.{sub_type.decode("iso-8859-1")}',
                     ins, sub_type, sub_size)
-            except Exception as error:
-                self.handle_load_error(error, ins, sub_type, sub_size)
 
-    def handle_load_error(self, error, ins, sub_type, sub_size):
+    def __handle_load_error(self, error, ins, sub_type, sub_size):
         eid = getattr(self, u'eid', u'<<NO EID>>')
         bolt.deprint(u'Error loading %r record and/or subrecord: %08X' %
                      (self.rec_str, self.fid))
@@ -616,7 +618,9 @@ class MelRecord(MreRecord):
         bolt.deprint(u'  subrecord = %r' % sub_type)
         bolt.deprint(u'  subrecord size = %d' % sub_size)
         bolt.deprint(u'  file pos = %d' % ins.tell(), traceback=True)
-        raise exception.ModError(ins.inName, repr(error))
+        if type(error) is str:
+            raise exception.ModError(ins.inName, error)
+        raise exception.ModError(ins.inName, f'{error!r}') from error
 
     def dumpData(self,out):
         """Dumps state into out. Called by getSize()."""

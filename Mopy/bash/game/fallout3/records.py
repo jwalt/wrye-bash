@@ -2045,7 +2045,7 @@ class _MelNpcData(MelLists):
 
     def __init__(self, struct_formats):
         super(_MelNpcData, self).__init__(b'DATA', struct_formats, u'health',
-                                          (u'attributes', [0] * 21))
+            (u'attributes', [0] * int(struct_formats[-1][:-1])))
 
 class MreNpc(MreActor):
     """Non-Player Character."""

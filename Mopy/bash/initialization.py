@@ -58,9 +58,8 @@ def getPersonalPath(bash_ini_, my_docs_path):
         my_docs_path = dirs[u'app'].join(my_docs_path)
     #  Error check
     if not my_docs_path.exists():
-        raise BoltError(u'Personal folder does not exist.\n'
-                        u'Personal folder: %s\nAdditional info:\n%s'
-                        % (my_docs_path, sErrorInfo))
+        raise BoltError(f'Personal folder does not exist.\nPersonal folder: '
+                        f'{my_docs_path}\nAdditional info:\n{sErrorInfo}')
     return my_docs_path
 
 def getLocalAppDataPath(bash_ini_, app_data_local_path):
@@ -81,10 +80,8 @@ def getLocalAppDataPath(bash_ini_, app_data_local_path):
         app_data_local_path = dirs[u'app'].join(app_data_local_path)
     #  Error check
     if not app_data_local_path.exists():
-        raise BoltError(
-            u'Local AppData folder does not exist.\nLocal AppData folder: '
-            u'%s\nAdditional info:\n%s'
-            % (app_data_local_path, sErrorInfo))
+        raise BoltError(f'Local AppData folder does not exist.\nLocal AppData '
+            f'folder: {app_data_local_path}\nAdditional info:\n{sErrorInfo}')
     return app_data_local_path
 
 def getOblivionModsPath(bash_ini_, game_info):
@@ -94,14 +91,14 @@ def getOblivionModsPath(bash_ini_, game_info):
         src = [u'[General]', u'sOblivionMods']
     elif not ws_info.installed:
         # Currently the standard location, next to the game install
-        ob_mods_path = GPath(GPath(u'..').join(u'%s Mods'
-                                               % game_info.bash_root_prefix))
+        ob_mods_path = GPath(GPath(u'..').join(
+            f'{game_info.bash_root_prefix} Mods'))
         src = u'Relative Path'
     else:
         # New location for Windows Store games,
         # Documents\Wrye Bash\{game} Mods
         ob_mods_path = dirs[u'personal'].join(
-            u'Wrye Bash', u'%s Mods' % game_info.bash_root_prefix)
+            u'Wrye Bash', f'{game_info.bash_root_prefix} Mods')
         src = u'My Documents'
     if not ob_mods_path.isabs(): ob_mods_path = dirs[u'app'].join(ob_mods_path)
     return ob_mods_path, src
@@ -158,7 +155,7 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
         dirs[u'saveBase'] = personal.join(u'My Games', game_info.my_games_name)
     else:
         dirs[u'saveBase'] = dirs[u'app']
-    deprint(u'My Games location set to %s' % dirs[u'saveBase'])
+    deprint(f'My Games location set to {dirs[u"saveBase"]}')
     #  Local Application Data
     dirs[u'local_appdata'] = localAppData = getLocalAppDataPath(bashIni_,
                                                                 localAppData)
@@ -171,7 +168,7 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
             game_info.appdata_name)
     else:
         dirs[u'userApp'] = localAppData.join(game_info.appdata_name)
-    deprint(u'LocalAppData location set to %s' % dirs[u'userApp'])
+    deprint(f'LocalAppData location set to {dirs[u"userApp"]}')
     # Use local copy of the oblivion.ini if present
     # see: http://en.uesp.net/wiki/Oblivion:Ini_Settings
     # Oblivion reads the Oblivion.ini in the directory where it exists
@@ -225,7 +222,7 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
     dirs[u'modsBash'], modsBashSrc = getLegacyPathWithSource(
         dirs[u'modsBash'], dirs[u'app'].join(game_info.mods_dir, u'Bash'),
         modsBashSrc, u'Relative Path')
-    deprint(u'Bash Mod Data location set to %s' % dirs[u'modsBash'])
+    deprint(f'Bash Mod Data location set to {dirs[u"modsBash"]}')
     dirs[u'installers'] = oblivionMods.join(u'Bash Installers')
     dirs[u'installers'] = getLegacyPath(dirs[u'installers'],
                                         dirs[u'app'].join(u'Installers'))
@@ -243,21 +240,28 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
     try:
         for dir_key in dir_keys:
             wanted_dir = dirs[dir_key]
-            deprint(u' - %s' % wanted_dir)
+            deprint(f' - {wanted_dir}')
             shellMakeDirs([wanted_dir])
     except NonExistentDriveError as e:
         # NonExistentDriveError is thrown by shellMakeDirs if any of the
         # directories cannot be created due to residing on a non-existing
-        # drive. Find which keys are causing the errors
+        # drive (in posix if permission is denied). Find which keys are
+        # causing the errors
         badKeys = set()     # List of dirs[key] items that are invalid
         # First, determine which dirs[key] items are causing it
         for dir_key in dir_keys:
             if dirs[dir_key] in e.failed_paths:
                 badKeys.add(dir_key)
         # Now, work back from those to determine which setting created those
-        msg = _(u'Error creating required Wrye Bash directories.') + u'  ' + _(
-            u'Please check the settings for the following paths in your '
-            u'bash.ini, the drive does not exist') + u':\n\n'
+        if os.name == 'posix':
+            m = _("Please check the settings for the following paths in your "
+                  "bash.ini, the drive does not exist or you don't have write "
+                  "permissions")
+        else:
+            m = _(u'Please check the settings for the following paths in your '
+                  u'bash.ini, the drive does not exist')
+        msg = _(u'Error creating required Wrye Bash directories.') + \
+              f'  {m}:\n\n'
         relativePathError = []
         if u'modsBash' in badKeys:
             if isinstance(modsBashSrc, list):
@@ -276,8 +280,8 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
             # So check to be sure we haven't already added a message about that
             if bainDataSrc != oblivionModsSrc:
                 if isinstance(bainDataSrc, list):
-                    msg += (u' '.join(bainDataSrc) + u'\n    %s\n' % dirs[
-                        u'bainData'])
+                    msg += u' '.join(
+                        bainDataSrc) + f'\n    {dirs[u"bainData"]}\n'
                 else:
                     relativePathError.append(dirs[u'bainData'])
         if relativePathError:
@@ -286,7 +290,7 @@ def init_dirs(bashIni_, personal, localAppData, game_info):
                              u'however usually a relative path should be fine.')
             msg += u'  ' + _(u'Check your setup to see if you are using '
                              u'symbolic links or NTFS Junctions') + u':\n\n'
-            msg += u'\n'.join([u'%s' % x for x in relativePathError])
+            msg += u'\n'.join([f'{x}' for x in relativePathError])
         raise BoltError(msg)
     global bash_dirs_initialized
     bash_dirs_initialized = True

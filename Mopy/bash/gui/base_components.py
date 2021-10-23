@@ -28,6 +28,8 @@ __author__ = u'nycz, Infernio'
 import os
 import platform
 import textwrap
+from typing import Type
+
 import wx as _wx
 from .events import EventHandler, null_processor
 from ..bolt import deprint
@@ -129,8 +131,9 @@ class _ACFrozen(object):
 class _AComponent(object):
     """Abstract base class for all GUI items. Holds a reference to the native
     wx widget that we abstract over.
-    # :type _native_widget: _wx.Window FIXME(ut) PY3: add type info"""
-    _wx_widget_type = None # type: type
+    :type _native_widget: _wx.Window
+    """
+    _wx_widget_type = None # type: Type[_wx.Window]
 
     def __init__(self, parent, *args, **kwargs):
         """Creates a new _AComponent instance by initializing the wx widget
@@ -323,7 +326,10 @@ class _AComponent(object):
     def destroy_component(self):
         """Destroys this component - non-internal usage is a smell, avoid if at
         all possible."""
-        self._native_widget.Destroy()
+        if self._native_widget:
+            self._native_widget.Destroy()
+        else:
+            deprint(f'{type(self)}: {self._native_widget} was deleted')
 
     def wx_id_(self): ##: Avoid, we do not want to program with gui ids
         return self._native_widget.GetId()

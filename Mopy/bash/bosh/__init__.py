@@ -2341,7 +2341,7 @@ class ModInfos(FileInfos):
         toggling bash.mods.autoGhost to False we forcibly unghost all mods
         """
         changed = []
-        toGhost = bass.settings.get(u'bash.mods.autoGhost',False)
+        toGhost = bass.settings[u'bash.mods.autoGhost']
         if force or toGhost:
             allowGhosting = self.table.getColumn(u'allowGhosting')
             for mod, modInfo in self.items():
@@ -2520,7 +2520,7 @@ class ModInfos(FileInfos):
                 present.add(fileInfo.ci_key)
             merged, imported = self.getSemiActive(present)
         else:
-            log.setHeader(head + _(u'Active Mod Files:'))
+            log.setHeader(head + _(u'Active Plugins:'))
             masters_set = set(load_order.cached_active_tuple())
             merged, imported = self.merged, self.imported
         all_mods = (masters_set | merged | imported) & set(self)

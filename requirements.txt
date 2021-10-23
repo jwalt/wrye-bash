@@ -11,4 +11,4 @@ pygit2==1.6.1
 pyfiglet==0.8.post1
 pyinstaller==4.5.1
 pytest==6.2.4
-toml==0.10.2
+tomli==1.2.1
