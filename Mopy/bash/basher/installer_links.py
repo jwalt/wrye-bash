@@ -420,7 +420,7 @@ class Installer_Duplicate(OneItemLink, _InstallerLink):
         allowed_exts = set() if not self._selected_info.is_archive() else {
             self._selected_item.ext}
         result = self._askFilename(
-            _(u'Duplicate %s to:') % self._selected_item, newName.s,
+            _(u'Duplicate %s to:') % self._selected_item, newName,
             inst_type=type(self._selected_info),
             disallow_overwrite=True, no_dir=False, ##: no_dir=False?
             allowed_exts=allowed_exts, use_default_ext=False)
@@ -676,9 +676,8 @@ class _Installer_OpenAt(_InstallerLink):
 
     def _enable(self):
         # The menu won't even be enabled if >1 plugin is selected
-        x = self.__class__.regexp.search(self.selected[0].s)
-        if not x: return False
-        self.mod_url_id = x.group(self.__class__.group)
+        x = self.__class__.regexp.search(self.selected[0])
+        self.mod_url_id = x and x.group(self.__class__.group)
         return bool(self.mod_url_id)
 
     def _url(self): return self.__class__.baseUrl + self.mod_url_id
@@ -1096,7 +1095,7 @@ class Installer_SyncFromData(_SingleInstallable):
                     self._selected_info.mismatchedFiles)
 
     def Execute(self):
-        was_rar = self._selected_item.cext == u'.rar'
+        was_rar = self._selected_item.ci_ext == u'.rar'
         if was_rar:
             if not self._askYes(
                     _(u'.rar files cannot be modified. Wrye Bash can however '
@@ -1305,7 +1304,7 @@ class InstallerConverter_Create(_InstallerConverter_Link):
         #--List source archives and target archive
         message = _(u'Convert:')
         message += u'\n* ' + u'\n* '.join(sorted(
-            u'(%08X) - %s' % (v.crc, k.s) for k, v in self.iselected_pairs()))
+            f'({v.crc:08X}) - {k}' for k, v in self.iselected_pairs()))
         message += (u'\n\n'+_(u'To:')+u'\n* (%08X) - %s') % (self.idata[destArchive].crc,destArchive) + u'\n'
         #--Confirm operation
         BCFArchive = self._askFilename(message, BCFArchive.s,

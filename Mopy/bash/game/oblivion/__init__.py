@@ -47,7 +47,7 @@ class OblivionGameInfo(PatchGame):
     game_detect_includes = [_j(u'Data', u'Oblivion.esm')]
     game_detect_excludes = WS_COMMON
     version_detect_file = u'Oblivion.exe'
-    master_file = bolt.GPath_no_norm(u'Oblivion.esm')
+    master_file = bolt.FName(u'Oblivion.esm')
     taglist_dir = u'Oblivion'
     loot_dir = u'Oblivion'
     boss_game_name = u'Oblivion'

@@ -165,8 +165,8 @@ class Mod_CreateDummyMasters(OneItemLink, _LoadLink):
             # Add the appropriate flags based on extension. This is obviously
             # just a guess - you can have a .esm file without an ESM flag in
             # Skyrim LE - but these are also just dummy masters.
-            cext_ = newInfo.ci_key.cext
-            if (is_esl:= cext_ == '.esl') or cext_ == '.esm':
+            ciext = newInfo.ci_key.ci_ext
+            if (is_esl := ciext == '.esl') or ciext == '.esm':
                 newFile.tes4.flags1.esm = True
                 newFile.tes4.flags1.eslFile = is_esl
             newFile.safeSave()
@@ -473,7 +473,7 @@ class _ModGroups(CsvParser):
         """Imports mod groups from specified text file."""
         if len(csv_fields) >= 2 and bosh.ModInfos.rightFileType(csv_fields[0]):
             mod, mod_grp = csv_fields[:2]
-            self.mod_group[GPath(mod)] = mod_grp
+            self.mod_group[mod] = mod_grp
 
     def _write_rows(self, out):
         """Exports eids to specified text file."""
@@ -716,7 +716,7 @@ class Mod_CopyModInfo(ItemLink):
             else: info_txt += u'\n\n'
             #-- Name of file, plus a link if we can figure it out
             inst = fileInfo.get_table_prop(u'installer', u'')
-            if not inst: info_txt += fileName.s
+            if not inst: info_txt += fileName
             else: info_txt += _(u'URL: %s') % _getUrl(inst)
             labels = self.window.labels
             for col in self.window.allowed_cols:
@@ -785,9 +785,8 @@ class Mod_JumpToInstaller(AppendableLink, OneItemLink):
         u'bash.installers.enabled']
 
     def _enable(self):
-        return (super(Mod_JumpToInstaller, self)._enable()
-                and self.window.get_installer(self._selected_item)
-                is not None) # need a boolean here
+        return (super()._enable() and bool( # we need a boolean here
+            self.window.get_installer(self._selected_item)))
 
     def Execute(self): self.window.jump_to_mods_installer(self._selected_item)
 
@@ -917,7 +916,7 @@ class Mod_MarkMergeable(ItemLink):
         if yes:
             message += u'=== ' + (
                 _(u'ESL Capable') if bush.game.check_esl else _(
-                    u'Mergeable')) + u'\n* ' + u'\n\n* '.join(x.s for x in yes)
+                    u'Mergeable')) + u'\n* ' + u'\n\n* '.join(yes)
         if yes and no:
             message += u'\n\n'
         if no:
@@ -1128,7 +1127,7 @@ class Mod_ExportPatchConfig(_Mod_BP_Link):
     def Execute(self):
         #--Config
         config = self._selected_info.get_table_prop(u'bash.patch.configs', {})
-        exportConfig(patch_name=self._selected_item.s, config=config,
+        exportConfig(patch_name=self._selected_item, config=config,
             win=self.window, outDir=bass.dirs[u'patches'])
 
 # Cleaning submenu ------------------------------------------------------------
@@ -1265,7 +1264,7 @@ class Mod_ScanDirty(ItemLink):
             del_navms = all_deleted_navms[m_ci_key]
             del_refs = all_deleted_refs[m_ci_key]
             del_others = all_deleted_others[m_ci_key]
-            if m_ci_key == game_master_name or m_ci_key.cext == u'.esu':
+            if m_ci_key == game_master_name or m_ci_key.ci_ext == u'.esu':
                 skipped_plugins.append(u'* __%s__' % modInfo)
             elif del_navms or del_refs or del_others:
                 full_dirty_msg = u'* __%s__:\n' % modInfo
@@ -1530,7 +1529,7 @@ class Mod_FlipEsm(_Esm_Esl_Flip):
         games the esp extension is even more important as .esm and .esl files
         implicitly have the master flag set no matter what."""
         first_is_esm = self._already_flagged
-        return all(m.cext in (u'.esp', u'.esu') and
+        return all(m.ci_ext in (u'.esp', u'.esu') and
                    minfo.has_esm_flag() == first_is_esm
                    for m, minfo in self.iselected_pairs())
 
@@ -1562,7 +1561,7 @@ class Mod_FlipEsl(_Esm_Esl_Flip):
         """Allow if all selected mods have valid extensions, have same esl flag
         and are esl capable if converting to esl."""
         first_is_esl = self._already_flagged
-        return all(m.cext in (u'.esm', u'.esp', u'.esu') and
+        return all(m.ci_ext in (u'.esm', u'.esp', u'.esu') and
                    minfo.has_esl_flag() == first_is_esl and
                    (first_is_esl or m in bosh.modInfos.mergeable)
                    for m, minfo in self.iselected_pairs())
@@ -1597,7 +1596,7 @@ class Mod_FlipMasters(OneItemLink, _Esm_Esl_Flip):
         modinfo_masters = present_mods[selection[0]].masterNames
         if len(selection) == 1 and len(modinfo_masters) > 1:
             self.espMasters = [m for m in modinfo_masters if
-                               m in present_mods and m.cext == '.esp']
+                               m in present_mods and m.ci_ext == '.esp']
             self._do_enable = bool(self.espMasters)
         else:
             self.espMasters = []
@@ -1747,8 +1746,8 @@ class _Import_Export_Link(AppendableLink):
 
 class _Mod_Export_Link(_Import_Export_Link, _CsvExport_Link):
     def Execute(self):
-        textName = self.selected[0].root + self.__class__.csvFile
-        textPath = self._csv_out(textName)
+        textPath = self._csv_out(
+            f'{self.selected[0].ci_body}{self.__class__.csvFile}')
         if not textPath: return
         #--Export
         with balt.Progress(self.__class__.progressTitle) as progress:

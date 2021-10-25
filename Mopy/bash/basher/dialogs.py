@@ -263,7 +263,7 @@ class CreateNewPlugin(DialogWindow):
         self._master_search.on_text_changed.subscribe(self._handle_search)
         self._masters_box = CheckListBox(self)
         # Initially populate the masters list, checking only the game master
-        self._masters_dict = {m.s: m == bush.game.master_file for m in
+        self._masters_dict = {m: m == bush.game.master_file for m in
                               load_order.cached_lo_tuple()}
         self._masters_box.set_all_items(self._masters_dict)
         # Only once that's done do we subscribe - avoid all the initial events
@@ -379,7 +379,7 @@ class CreateNewPlugin(DialogWindow):
         pw.data_store.create_new_mod(chosen_name, windowSelected,
             esm_flag=self._esm_flag.is_checked,
             esl_flag=self._esl_flag.is_checked,
-            wanted_masters=[bolt.GPath(m) for m in self._chosen_masters])
+            wanted_masters=[*map(FName, self._chosen_masters)])
         if windowSelected:  # assign it the group of the first selected mod
             mod_group = pw.data_store.table.getColumn(u'group')
             mod_group[chosen_name] = mod_group.get(windowSelected[0], u'')

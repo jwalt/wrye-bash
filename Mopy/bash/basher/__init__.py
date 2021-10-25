@@ -322,7 +322,7 @@ class MasterList(_ModsUIList):
     _sort_keys = {
         u'Num'          : None, # sort by master index, the key itself
         u'File'         : lambda self, a:
-            self.data_store[a].curr_name.s.lower(),
+            self.data_store[a].curr_name.lower(),
         # Missing mods sort last alphabetically
         u'Current Order': lambda self, a: self._curr_lo_index[
             self.data_store[a].curr_name],
@@ -339,7 +339,7 @@ class MasterList(_ModsUIList):
     #--Labels
     labels = OrderedDict([
         (u'File',          lambda self, mi: bosh.modInfos.masterWithVersion(
-            self.data_store[mi].curr_name.s)),
+            self.data_store[mi].curr_name)),
         (u'Num',           lambda self, mi: u'%02X' % mi),
         (u'Current Order', lambda self, mi: bosh.modInfos.hexIndexString(
             self.data_store[mi].curr_name)),
@@ -506,10 +506,10 @@ class MasterList(_ModsUIList):
             if final_text_key != u'mods.text.es':
                 item_format.text_key = final_text_key
         # Text background
-        if masters_name.s in bosh.modInfos.activeBad: # if active, it's in LO
+        if masters_name in bosh.modInfos.activeBad: # if active, it's in LO
             item_format.back_key = u'mods.bkgd.doubleTime.load'
             mouseText += _(u'Plugin name incompatible, will not load. ')
-        elif bosh.modInfos.isBadFileName(masters_name.s): # might not be in LO
+        elif bosh.modInfos.isBadFileName(masters_name): # might not be in LO
             item_format.back_key = u'mods.bkgd.doubleTime.exists'
             mouseText += _(u'Plugin name incompatible, cannot be activated. ')
         elif masterInfo.hasActiveTimeConflict():
@@ -634,7 +634,7 @@ class INIList(balt.UIList):
     _extra_sortings = [_sortValidFirst]
     #--Labels
     labels = OrderedDict([
-        (u'File',      lambda self, p: p.s),
+        (u'File',      lambda self, p: p),
         (u'Installer', lambda self, p: self.data_store[p].get_table_prop(
             u'installer', u'')),
     ])
@@ -901,7 +901,7 @@ class ModList(_ModsUIList):
     _sunkenBorder = False
     #--Labels
     labels = OrderedDict([
-        (u'File',       lambda self, p:self.data_store.masterWithVersion(p.s)),
+        (u'File',       lambda self, p:self.data_store.masterWithVersion(p)),
         (u'Load Order', lambda self, p: self.data_store.hexIndexString(p)),
         (u'Indices',    lambda self, p:self.data_store[p].real_index_string()),
         (u'Rating',     lambda self, p: self.data_store[p].get_table_prop(
@@ -1081,7 +1081,7 @@ class ModList(_ModsUIList):
             from .frames import DocBrowser
             DocBrowser().show_frame()
             settings[u'bash.modDocs.show'] = True
-        Link.Frame.docBrowser.SetMod(modInfo.ci_key)
+        Link.Frame.docBrowser.SetMod(modInfo.ci_key) ##: will GPath it
         Link.Frame.docBrowser.raise_frame()
 
     def _handle_key_down(self, wrapped_evt):
@@ -1228,7 +1228,7 @@ class ModList(_ModsUIList):
                 changed = self.data_store.lo_deactivate(act, doSave=False)
                 if not changed:
                     # Can't deactivate that mod, track this
-                    illegal_deactivations.append(act.s)
+                    illegal_deactivations.append(act)
                     continue
                 touched |= changed
                 if len(changed) > (act in changed): # deactivated dependents
@@ -1244,13 +1244,13 @@ class ModList(_ModsUIList):
             if inact in touched: continue # already activated
             ## For now, allow selecting unicode named files, for testing
             ## I'll leave the warning in place, but maybe we can get the
-            ## game to load these files.s
+            ## game to load these files
             #if fileName in self.data_store.bad_names: return
             try:
                 activated = self.data_store.lo_activate(inact, doSave=False)
                 if not activated:
                     # Can't activate that mod, track this
-                    illegal_activations.append(inact.s)
+                    illegal_activations.append(inact)
                     continue
                 touched |= set(activated)
                 if len(activated) > (inact in activated): # activated masters
@@ -1313,8 +1313,7 @@ class ModList(_ModsUIList):
     def get_installer(self, modName):
         if not balt.Link.Frame.iPanel or not bass.settings[
             u'bash.installers.enabled']: return None
-        installer = self.data_store.table.getColumn(u'installer').get(modName)
-        return GPath(installer)
+        return FName(self.data_store.table.getColumn(u'installer').get(modName))
 
 #------------------------------------------------------------------------------
 class _DetailsMixin(object):
@@ -1580,7 +1579,7 @@ class ModDetails(_ModsSavesDetails):
         if fileName:
             modInfo = self.modInfo = bosh.modInfos[fileName]
             #--Remember values for edit checks
-            self.fileStr = modInfo.ci_key.s
+            self.fileStr = modInfo.ci_key
             self.authorStr = modInfo.header.author
             self.modifiedStr = format_date(modInfo.mtime)
             self.descriptionStr = modInfo.header.description
@@ -1700,7 +1699,7 @@ class ModDetails(_ModsSavesDetails):
         if changeName:
             oldName,newName = modInfo.ci_key,GPath(self.fileStr.strip())
             #--Bad name?
-            if (bosh.modInfos.isBadFileName(newName.s) and
+            if (bosh.modInfos.isBadFileName(newName) and
                 not balt.askContinue(self,_(
                     u'File name %s cannot be encoded to ASCII. %s may not be '
                     u'able to activate this plugin because of this. Do you '
@@ -1834,7 +1833,7 @@ class ModDetails(_ModsSavesDetails):
             _text = _(u'Copy to BashTags')
             _help = _(u'Copies a diff between currently applied tags and '
                       u'description/LOOT tags to %s.') % (
-                bass.dirs[u'tag_files'].join(mod_info.ci_key.body + u'.txt'))
+                bass.dirs[u'tag_files'].join(f'{mod_info.ci_key.ci_body}.txt'))
             def _enable(self):
                 return (not mod_info.is_auto_tagged() and
                         bosh.read_dir_tags(tag_plugin_name) != dir_diff)
@@ -1950,7 +1949,7 @@ class INIDetailsPanel(_DetailsMixin, SashPanel):
         fileName = super(INIDetailsPanel, self).SetFile(fileName)
         self._ini_detail = fileName
         self.tweakContents.refresh_tweak_contents(fileName)
-        self.tweakName.text_content = fileName.sbody if fileName else u''
+        self.tweakName.text_content = fileName.ci_body if fileName else u''
 
     def _enable_buttons(self):
         isGameIni = bosh.iniInfos.ini in bosh.gameInis
@@ -2119,7 +2118,7 @@ class SaveList(balt.UIList):
         playMinutes = saveInfo.header.gameTicks // 60000
         return u'%d:%02d' % (playMinutes//60, (playMinutes % 60))
     labels = OrderedDict([
-        (u'File',     lambda self, p: p.s),
+        (u'File',     lambda self, p: p),
         (u'Modified', lambda self, p: format_date(self.data_store[p].mtime)),
         (u'Size',     lambda self, p: round_size(self.data_store[p].fsize)),
         (u'PlayTime', lambda self, p: self._playTime(self.data_store[p])),
@@ -2291,7 +2290,7 @@ class SaveDetails(_ModsSavesDetails):
         if fileName:
             saveInfo = self.saveInfo = bosh.saveInfos[fileName]
             #--Remember values for edit checks
-            self.fileStr = saveInfo.ci_key.s
+            self.fileStr = saveInfo.ci_key
             self.playerNameStr = saveInfo.header.pcName
             self.curCellStr = saveInfo.header.pcLocation
             self.gameDays = saveInfo.header.gameDays
@@ -2441,7 +2440,7 @@ class InstallersList(balt.UIList):
     _extra_sortings = [_sortStructure, _sortActive, _sortProjects]
     #--Labels
     labels = OrderedDict([
-        (u'Package',  lambda self, p: p.s),
+        (u'Package',  lambda self, p: p),
         (u'Order',    lambda self, p: u'%d' % self.data_store[p].order),
         (u'Modified', lambda self, p: format_date(self.data_store[p].modified)),
         (u'Size',     lambda self, p: self.data_store[p].size_string()),
@@ -2937,7 +2936,7 @@ class InstallersDetails(_SashDetailsPanel):
         if fileName:
             installer = self._idata[fileName]
             #--Name
-            self.gPackage.text_content = fileName.s
+            self.gPackage.text_content = fileName
             #--Info Pages
             currentIndex = self.gNotebook.get_selected_page_index()
             for index,(gPage,state) in enumerate(self.infoPages):
@@ -3240,7 +3239,7 @@ class InstallersPanel(BashTab):
         if self.frameActivated:
             folders, files = top_level_items(bass.dirs[u'installers'])
             omds = [GPath_no_norm(inst_path) for inst_path in files
-                    if os.path.splitext(inst_path)[1].lower() in archives.omod_exts]
+                    if inst_path.ci_ext in archives.omod_exts]
             if any(inst_path not in omods.failedOmods for inst_path in omds):
                 omod_projects = self.__extractOmods(omds) ##: change above to filter?
                 folders.extend(omod_projects)
@@ -3377,7 +3376,7 @@ class ScreensList(balt.UIList):
                  }
     #--Labels
     labels = OrderedDict([
-        (u'File',     lambda self, p: p.s),
+        (u'File',     lambda self, p: p),
         (u'Modified', lambda self, p: format_date(self.data_store[p].mtime)),
         (u'Size',     lambda self, p: round_size(self.data_store[p].fsize)),
     ])
@@ -3502,7 +3501,7 @@ class BSAList(balt.UIList):
                  }
     #--Labels
     labels = OrderedDict([
-        (u'File',     lambda self, p: p.s),
+        (u'File',     lambda self, p: p),
         (u'Modified', lambda self, p: format_date(self.data_store[p].mtime)),
         (u'Size',     lambda self, p: round_size(self.data_store[p].fsize)),
     ])
@@ -3545,7 +3544,7 @@ class BSADetails(_EditableMixinOnFileInfos, SashPanel):
         if fileName:
             self._bsa_info = bosh.bsaInfos[fileName]
             #--Remember values for edit checks
-            self.fileStr = self._bsa_info.ci_key.s
+            self.fileStr = self._bsa_info.ci_key
             self.gInfo.text_content = self._bsa_info.get_table_prop(u'info',
                 _(u'Notes: '))
         else:
@@ -4233,12 +4232,12 @@ class BashFrame(WindowFrame):
                 del renames[old_mname]
         #--Clean backup
         for fileInfos in (bosh.modInfos,bosh.saveInfos):
-            goodRoots = {p.root for p in fileInfos}
+            goodRoots = {p.ci_body for p in fileInfos}
             backupDir = fileInfos.bash_dir.join(u'Backups')
             if not backupDir.is_dir(): continue
             for back_fname in backupDir.list():
                 back_path = backupDir.join(back_fname)
-                if back_fname.root not in goodRoots and back_path.is_file():
+                if back_fname.ci_body not in goodRoots and back_path.is_file():
                     back_path.remove()
 
     @staticmethod

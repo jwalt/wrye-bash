@@ -496,7 +496,7 @@ class InstallerProject_OmodConfigDialog(WindowFrame):
         self.config = config = omods.OmodConfig.getOmodConfig(project)
         #--GUI
         super(InstallerProject_OmodConfigDialog, self).__init__(parent,
-            title=_(u'Omod Config: ') + project.s,
+            title=_(u'Omod Config: ') + project,
             icon_bundle=Resources.bashBlue, sizes_dict=bass.settings,
             caption=True, clip_children=True, tab_traversal=True)
         #--Fields

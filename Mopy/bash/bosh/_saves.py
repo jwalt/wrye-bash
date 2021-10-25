@@ -468,7 +468,7 @@ class SaveFile(object):
             if modIndex < len(self._masters):
                 return self._masters[modIndex]
             elif modIndex == 0xFF:
-                return self.fileInfo.name
+                return self.fileInfo.ci_key
             else:
                 return _(u'Missing Master ')+hex(modIndex)
         #--ABomb
@@ -679,13 +679,13 @@ class SaveSpells(object):
         progress = SubProgress(progress, 0.4, 1.0, len(saveFile._masters) + 1)
         #--Extract spells from masters
         for index,master in enumerate(saveFile._masters):
-            progress(index,master.s)
+            progress(index,master)
             if master in modInfos:
                 self.importMod(modInfos[master])
         #--Extract created spells
         allSpells = self.allSpells
         saveName = self.saveInfo.ci_key
-        progress(progress.full-1,saveName.s)
+        progress(progress.full-1,saveName)
         for record in saveFile.created:
             if record._rec_sig == b'SPEL':
                 allSpells[(saveName,getObjectIndex(record.fid))] = record.getTypeCopy()
@@ -763,8 +763,7 @@ class SaveEnchantments(object):
         saveFile = self.saveFile = SaveFile(self.saveInfo)
         saveFile.load(SubProgress(progress,0,0.4))
         #--Extract created enchantments
-        saveName = self.saveInfo.ci_key
-        progress(progress.full-1,saveName.s)
+        progress(progress.full - 1, self.saveInfo.ci_key)
         for index,record in enumerate(saveFile.created):
             if record._rec_sig == b'ENCH':
                 record = record.getTypeCopy()

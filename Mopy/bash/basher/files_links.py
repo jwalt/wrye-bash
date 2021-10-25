@@ -20,10 +20,9 @@
 #  https://github.com/wrye-bash
 #
 # =============================================================================
-
 import re
 import time
-from .. import balt, bosh, bush, bolt, exception
+from .. import balt, bosh, bolt, exception
 from ..balt import ItemLink, ChoiceLink, OneItemLink
 from ..gui import BusyCursor, copy_text_to_clipboard
 from ..localize import format_date, unformat_date
@@ -115,13 +114,13 @@ class File_Duplicate(ItemLink):
             if msg and not self._askWarning(msg, _(
                 u'Duplicate %s') % fileInfo): continue
             #--Continue copy
-            r, e = to_duplicate.root, to_duplicate.ext
+            r, e = to_duplicate.ci_body, to_duplicate.ci_ext
             destName = fileInfo.unique_key(r, e, add_copy=True)
             destDir = fileInfo.info_dir
             if len(self.selected) == 1:
                 destPath = self._askSave(
                     title=_(u'Duplicate as:'), defaultDir=destDir,
-                    defaultFile=destName.s, wildcard=u'*%s' %e)
+                    defaultFile=destName, wildcard=f'*{e}')
                 if not destPath: return
                 destDir, destName = destPath.headTail
                 # FIXME validate (or ask save does that)?
@@ -158,7 +157,7 @@ class File_ListMasters(OneItemLink):
     def Execute(self):
         list_of_mods = bosh.modInfos.getModList(fileInfo=self._selected_info)
         copy_text_to_clipboard(list_of_mods)
-        self._showLog(list_of_mods, title=self._selected_item.s,
+        self._showLog(list_of_mods, title=self._selected_item,
                       fixedFont=False)
 
 class File_Snapshot(ItemLink):
@@ -181,10 +180,10 @@ class File_Snapshot(ItemLink):
                 if not destPath: return
                 (destDir,destName) = destPath.headTail
             #--Extract version number
-            fileRoot = fileName.root
+            fileRoot = fileName.ci_body
             destRoot = destName.sroot
             fileVersion = bolt.getMatch(
-                re.search(r'[ _]+v?([.\d]+)$', fileRoot.s, re.U), 1)
+                re.search(r'[ _]+v?([.\d]+)$', fileRoot), 1)
             snapVersion = bolt.getMatch(re.search(r'-[\d.]+$', destRoot))
             fileHedr = fileInfo.header
             if fileInfo.isMod() and (fileVersion or snapVersion) and bosh.reVersion.search(fileHedr.description):

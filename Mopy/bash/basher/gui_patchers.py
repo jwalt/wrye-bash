@@ -921,7 +921,7 @@ class _AListPanelCsv(_ListPatcherPanel):
         auto_items = super(_AListPanelCsv, self).getAutoItems()
         csv_ending = u'_%s.csv' % self._csv_key
         for fileName in sorted(patches_set()):
-            if fileName.s.endswith(csv_ending):
+            if fileName.endswith(csv_ending):
                 auto_items.append(fileName)
         return auto_items
 
@@ -1087,7 +1087,7 @@ class ImportActorsFaces(_ImporterPatcherPanel):
         """Pick TNR esp if present in addition to appropriately tagged mods."""
         mods_prior_to_patch = load_order.cached_lower_loading(
             patch_files.executing_patch)
-        return [mod for mod in mods_prior_to_patch if autoRe.match(mod.s) or (
+        return [mod for mod in mods_prior_to_patch if autoRe.match(mod) or (
             self.__class__.autoKey & bosh.modInfos[mod].getBashTags())]
 
 # -----------------------------------------------------------------------------

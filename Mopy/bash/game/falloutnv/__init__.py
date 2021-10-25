@@ -40,7 +40,7 @@ class FalloutNVGameInfo(Fallout3GameInfo):
     launch_exe = u'FalloutNV.exe'
     game_detect_includes = [u'FalloutNV.exe']
     version_detect_file = u'FalloutNV.exe'
-    master_file = bolt.GPath_no_norm(u'FalloutNV.esm')
+    master_file = bolt.FName(u'FalloutNV.esm')
     taglist_dir = u'FalloutNV'
     loot_dir = u'FalloutNV'
     boss_game_name = u'FalloutNV'

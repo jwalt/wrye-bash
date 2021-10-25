@@ -947,19 +947,19 @@ class WryeParser(ScriptParser.Parser):
         for filename in filenames:
             if not bass.dirs[u'mods'].join(filename).exists():
                 # Check for ghosted mods
-                if bolt.GPath(filename) in bosh.modInfos:
+                if filename in bosh.modInfos:
                     return True # It's a ghosted mod
                 return False
         return True
 
     def fn_get_plugin_lo(self, filename, default_val=-1):
         try:
-            return load_order.cached_lo_index(bolt.GPath(filename))
+            return load_order.cached_lo_index(filename) ##: todo need FName here??
         except KeyError: # has no LO
             return default_val
 
     def fn_get_plugin_status(self, filename):
-        p_name = bolt.GPath(filename)
+        p_name = FName(filename)
         if p_name in bosh.modInfos.merged: return 3   # Merged
         if load_order.cached_is_active(p_name): return 2  # Active
         if p_name in bosh.modInfos.imported: return 1 # Imported (not active/merged)

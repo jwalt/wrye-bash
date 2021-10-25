@@ -33,7 +33,7 @@ import os
 import re
 
 from .. import bass, bush
-from ..bolt import GPath, Path, deprint, LooseVersion
+from ..bolt import FName, Path, deprint, LooseVersion
 from ..env import get_file_version
 from ..exception import AbstractError, EvalError, FileError
 from ..load_order import cached_active_tuple, cached_is_active, in_master_block
@@ -152,9 +152,9 @@ def _fn_active(path_or_regex):
         # Regex means we have to look at each active plugin - plugins can
         # obviously only be in Data, no need to process the path here
         matches_regex = re.compile(path_or_regex).match
-        return any(map(matches_regex, (p.s for p in cached_active_tuple())))
+        return any(map(matches_regex, cached_active_tuple()))
     else:
-        return cached_is_active(GPath(path_or_regex))
+        return cached_is_active(FName(path_or_regex))
 
 def _fn_checksum(file_path, expected_crc):
     # type: (str, int) -> bool
@@ -196,10 +196,9 @@ def _fn_is_master(file_path):
     exists and is treated as a master by the currently managed game.
 
     :param file_path: The file path to check."""
-    plugin_path = GPath(file_path)
     from . import modInfos
     # Need to check if it's on disk first, otherwise modInfos[x] errors
-    return plugin_path in modInfos and in_master_block(modInfos[plugin_path])
+    return file_path in modInfos and in_master_block(modInfos[file_path])
 
 def _fn_many(path_regex):
     # type: (str) -> bool
@@ -230,7 +229,7 @@ def _fn_many_active(path_regex):
     # Check if we have more than one matching active plugin
     matching_count = 0
     for p in cached_active_tuple():
-        if matches_regex(p.s):
+        if matches_regex(p):
             matching_count += 1
             if matching_count > 1:
                 return True

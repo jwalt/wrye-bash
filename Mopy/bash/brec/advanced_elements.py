@@ -35,7 +35,7 @@ from itertools import chain
 from .basic_elements import MelBase, MelNull, MelObject, MelStruct, \
     MelSequential
 from .. import exception
-from ..bolt import GPath, structs_cache, attrgetter_cache, deprint
+from ..bolt import structs_cache, attrgetter_cache, deprint
 
 #------------------------------------------------------------------------------
 class _MelDistributor(MelNull):
@@ -701,7 +701,7 @@ class SaveDecider(ADecider):
         self._save_ext = bush.game.Ess.ext
 
     def decide_load(self, record, ins, sub_type, rec_size):
-        return ins.inName.cext == self._save_ext
+        return ins.inName.ci_ext == self._save_ext
 
 class SignatureDecider(ADecider):
     """Very simple decider that just returns the subrecord type (aka

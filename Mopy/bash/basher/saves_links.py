@@ -273,7 +273,7 @@ class Save_ImportFace(OneItemLink):
                 saveFile = bosh._saves.SaveFile(srcInfo)
                 saveFile.load(progress)
             srcFaces = bosh.faces.PCFaces.save_getFaces(saveFile)
-        elif bosh.ModInfos.rightFileType(srcPath): # Import from a mod
+        elif bosh.ModInfos.rightFileType(fname): # Import from a mod
             #--Get faces
             srcInfo = bosh.ModInfo(srcPath)
             srcFaces = bosh.faces.PCFaces.mod_getFaces(srcInfo)
@@ -355,11 +355,11 @@ class Save_DiffMasters(EnabledLink):
             message = u''
             if missing:
                 message += u'=== '+_(u'Removed Masters')+u' (%s):\n* ' % oldName
-                message += u'\n* '.join(x.s for x in load_order.get_ordered(missing))
+                message += u'\n* '.join(load_order.get_ordered(missing))
                 if added: message += u'\n\n'
             if added:
                 message += u'=== ' + _(u'Added Masters') + f' ({newName}):\n* '
-                message += u'\n* '.join(x.s for x in load_order.get_ordered(added))
+                message += u'\n* '.join(load_order.get_ordered(added))
             self._showWryeLog(message, title=_(u'Diff Masters'))
 
 #------------------------------------------------------------------------------
@@ -396,7 +396,7 @@ class Save_Renumber(EnabledLink):
             s_groups = maPattern.groups()
             if not s_groups[1]: continue
             newFileName = f'{s_groups[0]}{newNumber:d}{s_groups[2]}'
-            if newFileName != old_file_path: # FIXME ci comp
+            if newFileName != old_file_path:
                 new_file_path = GPath(newFileName)
                 if self.window.try_rename(sinf, new_file_path, new_names,
                                           old_names):

@@ -1110,12 +1110,6 @@ class Installer(ListInfo):
     def wizard_file(self): raise AbstractError
     def fomod_file(self): raise AbstractError
 
-    def __repr__(self):
-        return u'%s<%r>' % (self.__class__.__name__, self.archive)
-
-    def __str__(self):
-        return self.archive
-
     #--ABSTRACT ---------------------------------------------------------------
     def _refreshSource(self, progress, recalculate_project_crc):
         """Refresh fileSizeCrcs, size, and modified from source
@@ -2439,8 +2433,8 @@ class InstallersData(DataStore):
         modInfos.refreshLoadOrder(unlock_lo=True)
         # now that we saved load order update missing mtimes for mods:
         for mod in mods:
-            s, c, _d = data_sizeCrcDate_update[mod.s]
-            data_sizeCrcDate_update[mod.s] = (s, c, modInfos[mod].mtime)
+            s, c, _d = data_sizeCrcDate_update[mod]
+            data_sizeCrcDate_update[mod] = (s, c, modInfos[mod].mtime)
         # and for rest of the files - we do mods separately for ghosts
         self.data_sizeCrcDate.update((dest, (
             s, c, (d != -1 and d) or bass.dirs[u'mods'].join(dest).mtime)) for
@@ -2704,12 +2698,12 @@ class InstallersData(DataStore):
             bush.game.Bain.keep_data_files,
             bush.game.Bain.wrye_bash_data_files)))
         from . import modInfos
-        for bpatch in modInfos.bashed_patches: # type: bolt.Path
-            ci_keep_files.add(bolt.CIstr(bpatch.s))
+        for bpatch in modInfos.bashed_patches: # type: FName
+            ci_keep_files.add(CIstr(bpatch))
             bp_doc = modInfos.table.getItem(bpatch, u'doc')
             if bp_doc: # path is absolute, convert to relative to the Data/ dir
                 try:
-                    bp_doc = bp_doc.relpath(bass.dirs[u'mods'].s)
+                    bp_doc = bp_doc.relpath(bass.dirs[u'mods'])
                 except ValueError: # https://bugs.python.org/issue7195
                     # bp_doc on a different drive, will be skipped anyway
                     continue
@@ -2760,7 +2754,7 @@ class InstallersData(DataStore):
     #--Utils
     @staticmethod
     def _filter_installer_bsas(inst, active_bsas):
-        return [k for k in active_bsas if k.name.s in inst.ci_dest_sizeCrc]
+        return [k for k in active_bsas if k.ci_key in inst.ci_dest_sizeCrc]
 
     @staticmethod
     def _parse_error(bsa_inf, reason):

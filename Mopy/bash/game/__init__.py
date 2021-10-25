@@ -89,7 +89,7 @@ class GameInfo(object):
     # and therefore needs a different file here).
     version_detect_file = u''
     # The main plugin Wrye Bash should look for
-    master_file = bolt.GPath_no_norm('')
+    master_file = bolt.FName('')
     # The directory in which mods and other data files reside. This is relative
     # to the game directory.
     mods_dir = u'Data'
