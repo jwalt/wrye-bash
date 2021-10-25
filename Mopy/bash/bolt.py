@@ -28,6 +28,7 @@ from __future__ import annotations
 import collections
 import copy
 import datetime
+import functools
 import io
 import os
 import pickle
@@ -49,6 +50,7 @@ from functools import partial
 from itertools import chain
 from keyword import iskeyword
 from operator import attrgetter
+from typing import Dict
 from urllib.parse import quote
 
 import chardet
@@ -348,6 +350,101 @@ class CIstr(str):
     def __repr__(self):
         return u'%s(%s)' % (type(self).__name__, super(CIstr, self).__repr__())
 
+class FName(str):
+    """Class modeling a filename, used as the case insensitive key in data
+    stores. It only accepts a unicode filename in its constructor.
+    FName compares case insensitive to both FName and str, this is due to
+    being used mostly as a plain str instance, apart from comparisons.
+    That's still WIP - points to consider:
+      - use casefold instead of lower?
+      - currently we triple storage for each string (self, cache key and
+      ci_body). Apart from bsas code ci_body appears rarely - not cache?
+      (guess no)
+      - add other special methods like __add__ or slice operations to return
+      FName (guess no)
+      - comparisons and microbenchmarking:
+        - using EAFP supposing the usual case is FName - is it?
+        - is the case (self is other) relevant in equals (guess no)
+        - drop comparisons with Path (will help debugging)
+      - pickling: ideally we want to pickle strings as string type and
+      convert to internal format on load. Reason: backwards compatibility.
+      Of course on unpickling we must ensure __new__ is called.
+      - __slots__ is not an option for variable length builtin overrides,
+      keep an eye for that.
+    """
+    _filenames_cache = {} # type: Dict[str, FName]
+
+    def __new__(cls, unicode_str, *args, __cache=_filenames_cache, **kwargs):
+        ##: should this be moved after cache check? usual case? FName(fname) is
+        ##: used a lot in  dicts! pickles? Don't pickle those yet
+        if (typ := type(unicode_str)) is FName or unicode_str is None:
+            return unicode_str
+        if unicode_str in __cache: return __cache[unicode_str]
+        if typ is not str:
+            raise ValueError(f'{unicode_str!r} type is {typ} - a str is '
+                             f'required')
+        res = __cache[unicode_str] = super(FName, cls).__new__(
+            cls, unicode_str, *args, **kwargs)
+        return res
+
+    @functools.cached_property
+    def _lower(self): return super(FName, self).lower()
+
+    @functools.cached_property
+    def ci_ext(self):
+        return FName('' if (dot := self.rfind('.')) == -1 else self[dot:])
+
+    @functools.cached_property
+    def ci_body(self):
+        return FName(self[:-len(self.ci_ext)]) if self.ci_ext else self
+
+    def __reduce__(self):##: [backwards compat] drop in 312+ (but still store strs)
+        return GPath_no_norm, (str(self),)
+
+    def __deepcopy__(self, memodict={}):
+        return self # immutable
+
+    def __copy__(self):
+        return self # immutable
+
+    #--Hash/Compare
+    def __hash__(self):
+        return hash(self._lower)
+    def __eq__(self, other):
+        try:
+            return self._lower == other._lower # (self is other) or self...
+        except AttributeError:
+            # this will blow if other is not a str even if it defines lower
+            return other is not None and self._lower == str.lower(other)
+    def __ne__(self, other):
+        try:
+            return self._lower != other._lower
+        except AttributeError:
+            return other is None or self._lower != str.lower(other)
+    def __lt__(self, other):
+        try:
+            return self._lower < other._lower
+        except AttributeError:
+            return self._lower < str.lower(other)
+    def __ge__(self, other):
+        try:
+            return self._lower >= other._lower
+        except AttributeError:
+            return self._lower >= str.lower(other)
+    def __gt__(self, other):
+        try:
+            return self._lower > other._lower
+        except AttributeError:
+            return self._lower > str.lower(other)
+    def __le__(self, other):
+        try:
+            return self._lower <= other._lower
+        except AttributeError:
+            return self._lower <= str.lower(other)
+    #--repr
+    def __repr__(self):
+        return f'{type(self).__name__}({super(FName, self).__repr__()})'
+
 class LowerDict(dict):
     """Dictionary that transforms its keys to CIstr instances.
     See: https://stackoverflow.com/a/43457369/281545
@@ -409,8 +506,70 @@ class LowerDict(dict):
             k) is str else k for k in keys), v)
 
     def __repr__(self):
-        return u'%s(%s)' % (
-            type(self).__name__, super(LowerDict, self).__repr__())
+        return f'{type(self).__name__}({super(LowerDict, self).__repr__()})'
+
+class FNDict(dict):
+    """Dictionary that transforms its keys to FName instances. Only str keys
+    are accepted so we avoid the type checks we do in LowerDict."""
+    __slots__ = () # no __dict__ - that would be redundant
+
+    @staticmethod # because this doesn't make sense as a global function.
+    def _process_args(mapping=(), **kwargs):
+        if hasattr(mapping, u'items'):
+            mapping = mapping.items()
+        return ((FName(k), v) for k, v in chain(mapping, kwargs.items()))
+
+    def __init__(self, mapping=(), **kwargs):
+        # dicts take a mapping or iterable as their optional first argument
+        super(FNDict, self).__init__(self._process_args(mapping, **kwargs))
+
+    def __getitem__(self, k):
+        return super(FNDict, self).__getitem__(FName(k))
+
+    def __setitem__(self, k, v):
+        return super(FNDict, self).__setitem__(FName(k), v)
+
+    def __delitem__(self, k):
+        return super(FNDict, self).__delitem__(FName(k))
+
+    def copy(self): # don't delegate w/ super - dict.copy() -> dict :(
+        return type(self)(self)
+
+    def get(self, k, default=None):
+        return super(FNDict, self).get(FName(k), default)
+
+    def setdefault(self, k, default=None):
+        return super(FNDict, self).setdefault(FName(k), default)
+
+    __no_default = object()
+    def pop(self, k, v=__no_default):
+        if v is FNDict.__no_default:
+            # super will raise KeyError if no default and key does not exist
+            return super(FNDict, self).pop(FName(k))
+        return super(FNDict, self).pop(FName(k), v)
+
+    def update(self, mapping=(), **kwargs):
+        super(FNDict, self).update(self._process_args(mapping, **kwargs))
+
+    def __contains__(self, k):
+        return super(FNDict, self).__contains__(FName(k))
+
+    @classmethod
+    def fromkeys(cls, keys, v=None):
+        return super(FNDict, cls).fromkeys((FName(k) for k in keys), v)
+
+    def __repr__(self):
+        return f'{type(self).__name__}({super(FNDict, self).__repr__()})'
+
+    def __reduce__(self): #[backwards compat]we 'd rather not save custom types
+        return dict, (dict(self),)
+
+# Forward compat functions - if we decide we only want to pickle std types
+# those stay
+def forward_compat_path_to_fn(di, value_type=lambda x: x):
+    return FNDict(('%s' % k, value_type(v)) for k, v in di.items())
+def forward_compat_path_to_fn_list(li, ret_type=list):
+    return ret_type(map(FName, map(str, li)))
 
 class DefaultLowerDict(LowerDict, collections.defaultdict):
     """LowerDict that inherits from defaultdict."""
@@ -420,6 +579,22 @@ class DefaultLowerDict(LowerDict, collections.defaultdict):
         # note we can't use LowerDict __init__ directly
         super(LowerDict, self).__init__(default_factory,
                                         self._process_args(mapping, **kwargs))
+
+    def copy(self):
+        return type(self)(self.default_factory, self)
+
+    def __repr__(self):
+        return f'{type(self).__name__}({self.default_factory}, ' \
+               f'{super(collections.defaultdict, self).__repr__()})'
+
+class DefaultFNDict(FNDict, collections.defaultdict):
+    """FNDict that inherits from defaultdict."""
+    __slots__ = () # no __dict__ - that would be redundant
+
+    def __init__(self, default_factory=None, mapping=(), **kwargs):
+        # note we can't use LowerDict __init__ directly
+        super(FNDict, self).__init__(default_factory,
+                                     self._process_args(mapping, **kwargs))
 
     def copy(self):
         return type(self)(self.default_factory, self)

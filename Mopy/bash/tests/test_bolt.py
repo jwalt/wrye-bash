@@ -24,7 +24,7 @@ import pytest
 
 from ..bolt import LowerDict, DefaultLowerDict, OrderedLowerDict, decoder, \
     encode, getbestencoding, GPath, Path, Rounder, SigToStr, StrToSig, \
-    LooseVersion
+    LooseVersion, FName, FNDict, os_name
 
 def test_getbestencoding():
     """Tests getbestencoding. Keep this one small, we don't want to test
@@ -375,9 +375,10 @@ class TestPath(object):
         # paths and unicode
         p = GPath('c:/random/path.txt')
         assert 'c:/random/path.txt' == p
-        assert r'c:\random\path.txt' == p
+        if os_name == 'nt':
+            assert r'c:\random\path.txt' == p
+            assert GPath(r'c:\random\path.txt') == p
         assert GPath('c:/random/path.txt') == p
-        assert GPath(r'c:\random\path.txt') == p
         # paths and bytes
         assert b'c:/random/path.txt' == p
         with pytest.raises(SyntaxError):
@@ -405,9 +406,10 @@ class TestPath(object):
         # paths and unicode
         p = GPath('c:/random/path.txt')
         assert 'c:/random/path.txt' <= p
-        assert r'c:\random\path.txt' <= p
+        if os_name == 'nt':
+            assert r'c:\random\path.txt' <= p
+            assert GPath(r'c:\random\path.txt') <= p
         assert GPath('c:/random/path.txt') <= p
-        assert GPath(r'c:\random\path.txt') <= p
         # paths and bytes
         assert b'c:/random/path.txt' <= p
         with pytest.raises(SyntaxError):
@@ -434,12 +436,13 @@ class TestPath(object):
 
     def test_dict_keys(self):
         d = {GPath('c:/random/path.txt'): 1}
-        assert not ('c:/random/path.txt' in d) ## oops
-        assert r'c:\random\path.txt' in d
+        if os_name == 'nt':
+            assert not ('c:/random/path.txt' in d) ## oops
+            assert r'c:\random\path.txt' in d
+            assert GPath(r'c:\random\path.txt') in d
         assert GPath('c:/random/path.txt') in d
-        assert GPath(r'c:\random\path.txt') in d
         dd = {'c:/random/path.txt': 1}
-        assert not GPath('c:/random/path.txt') in dd
+        if os_name == 'nt': assert not GPath('c:/random/path.txt') in dd
         assert not GPath(r'c:\random\path.txt') in dd
 
 class TestRounder(object):
@@ -539,3 +542,124 @@ class TestLooseVersion:
         with pytest.raises(TypeError): assert LooseVersion('1.0') <= 'foo'
         with pytest.raises(TypeError): assert LooseVersion('1.0') > 'foo'
         with pytest.raises(TypeError): assert LooseVersion('1.0') >= 'foo'
+
+class TestFname(object):
+    """Fname vs Paths, stings and bytes."""
+
+    def test__eq__(self):
+        assert (fn := FName('path.txt')) == FName('Path.txt')
+        assert FName('path.txt') is fn # note they are identical
+        # fname and unicode strings
+        assert 'path.txt' == fn
+        assert 'Path.txt' == fn
+        # fname and bytes
+        with pytest.raises(TypeError): assert b'path.txt' != fn
+        # fname and paths
+        with pytest.raises(TypeError): assert fn != GPath('path.txt')
+        # paths and None
+        assert not (None == fn)
+        # test comp with Falsy/other types
+        for other in (b'', [], [1], True, False, 55):
+            with pytest.raises(TypeError): assert fn != other
+        # Falsy and "empty" FName
+        empty = FName('')
+        assert FName('') is empty
+        assert not empty
+        assert empty == ''
+        with pytest.raises(TypeError): assert empty != GPath('')
+        for other in (b'', [], [1], True, False, 55):
+            with pytest.raises(TypeError): assert empty != other
+        assert None != empty
+
+    def test__le__(self):
+        # fnames and unicode
+        fn = FName('path.txt')
+        assert 'path.txt' <= fn
+        assert GPath('path.txt') <= fn
+        # fnames and bytes
+        with pytest.raises(TypeError): assert b'path.txt' <= fn
+        # unrelated types - previously assertions passed
+        with pytest.raises(TypeError): assert not (fn <= [])
+        with pytest.raises(TypeError): assert not (fn <= [1])
+        with pytest.raises(TypeError): assert not (fn <= False)
+        with pytest.raises(TypeError): assert (None <= fn)
+        with pytest.raises(TypeError): assert not (fn <= None)
+        # Falsy and "empty" FName
+        empty = FName('')
+        # fixme order in comparison matters!
+        with pytest.raises(TypeError): assert empty <= Path('')
+        assert Path('') <= empty
+        assert empty <= ''
+        with pytest.raises(TypeError): assert empty <= b''
+        with pytest.raises(TypeError): assert empty <= []
+        with pytest.raises(TypeError): assert not (empty <= [1])
+        with pytest.raises(TypeError): assert empty <= False
+        with pytest.raises(TypeError): assert (None <= empty)
+
+    def test_dict_keys(self):
+        file_str = 'path.txt'
+        FILE_STR = file_str.upper()
+        assert (FN := FName(FILE_STR)) == (fn := FName(file_str))
+        fn_keys_dict = {fn: 1}
+        assert file_str in fn_keys_dict
+        assert not (FILE_STR in fn_keys_dict) # we need an FNDict!
+        assert FN in fn_keys_dict # yey
+        with pytest.raises(TypeError): assert GPath(file_str) in fn_keys_dict
+        with pytest.raises(TypeError): assert GPath(FILE_STR) in fn_keys_dict
+        string_keys_dict = {file_str: 1}
+        assert GPath(file_str) in string_keys_dict
+        assert GPath('PATH.TXT') in string_keys_dict
+        assert fn in string_keys_dict
+        assert FN in string_keys_dict
+        assert string_keys_dict[FN] == 1
+
+    def test_sets_lists(self):
+        file_str = 'path.txt'
+        FILE_STR = file_str.upper()
+        assert (FN := FName(FILE_STR)) == (fn := FName(file_str))
+        for cont_type in (set, list):
+            fn_set = cont_type([fn])
+            assert file_str in fn_set
+            contains = FILE_STR in fn_set
+            if cont_type is set: ##: oopsie
+                assert not contains # as in dict
+            else:
+                assert contains
+            assert FN in fn_set # yey
+            with pytest.raises(TypeError): assert GPath(file_str) in fn_set
+            with pytest.raises(TypeError): assert GPath(FILE_STR) in fn_set
+            string_set = cont_type([file_str])
+            assert GPath(file_str) in string_set
+            assert GPath(FILE_STR) in string_set
+            assert fn in string_set
+            assert FN in string_set
+
+    def test_ci_ext(self):
+        file_str = 'path.txt'
+        FILE_STR = file_str.upper()
+        assert (FN := FName(FILE_STR)) == (fn := FName(file_str))
+        assert FN.ci_ext == fn.ci_ext
+        assert FName('PATH.txt').ci_ext is fn.ci_ext
+        assert fn.ci_ext == '.txt'
+        assert fn.ci_ext == '.TXT'
+        assert not FName('').ci_ext
+        assert not FName('path').ci_ext
+
+    def test_ci_body(self):
+        file_str = 'path.txt'
+        FILE_STR = file_str.upper()
+        assert (FN := FName(FILE_STR)) == (fn := FName(file_str))
+        assert FN.ci_body == fn.ci_body
+        assert FName('path.TXT').ci_body is fn.ci_body
+        assert fn.ci_body == 'path'
+        assert fn.ci_body == 'PATH'
+        assert not FName('').ci_body
+        assert not FName('.txt').ci_body
+
+    def test_immutable(self):
+        a = FName('abc')
+        b = FName('abc')
+        assert a is b
+
+class TestFNDict(TestLowerDict):
+    dict_type = FNDict
