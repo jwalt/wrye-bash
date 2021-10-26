@@ -37,9 +37,9 @@ from operator import itemgetter
 from . import bush, load_order
 from .balt import Progress
 from .bass import dirs, inisettings
-from .bolt import GPath, decoder, deprint, setattr_deep, attrgetter_cache, \
+from .bolt import FName, decoder, deprint, setattr_deep, attrgetter_cache, \
     str_or_none, int_or_none, structs_cache, int_or_zero, sig_to_str, \
-    str_to_sig
+    str_to_sig, DefaultFNDict
 from .brec import MreRecord, MelObject, genFid, RecHeader, null4, \
     attr_csv_struct
 from .exception import AbstractError
@@ -53,9 +53,9 @@ def _key_sort(di, id_eid_=None, keys_dex=(), values_key=u'', by_value=False):
         for k in sorted(di, key=key_f):
             yield k, di[k], id_eid_[k]
     else:
-        if keys_dex or values_key: # TODO(ut): drop below when keys are CIStr
-            key_f = lambda k: tuple((u'%s' % k[x]).lower() for x in keys_dex
-                        ) + (di[k][values_key].lower(),)
+        if keys_dex or values_key: # TODO(ut) lower needed??
+            key_f = lambda k: (
+                *(k[x].lower() for x in keys_dex), di[k][values_key].lower())
         elif by_value:
             key_f = lambda k: di[k].lower()
         else:
@@ -196,8 +196,8 @@ class _HandleAliases(CsvParser):
         in the form 0x123abc abd check for aliases of modname."""
         if not hex_fid.startswith(u'0x'): raise ValueError # exit _parse_line
         # get alias for modname returned from _CsvReader
-        modname = GPath(modname)
-        return GPath(self.aliases.get(modname, modname)), int(hex_fid, 0)
+        modname = FName(modname)
+        return self.aliases.get(modname, modname), int(hex_fid, 0)
 
     def _parse_line(self, csv_fields):
         if self._grup_index is not None:
@@ -250,7 +250,7 @@ class _AParser(_HandleAliases):
         self._fp_types = ()
         # Internal variable, keeps track of mods we've already processed during
         # the first pass to avoid repeating work
-        self._fp_mods = set()
+        self._fp_mods = set() # TODO (paths): need compare in lowercase?
         # The name of the mod that is currently being loaded. Some parsers need
         # this to change their behavior when loading a mod file. This is a
         # unicode string matching the name of the mod being loaded, or None if
@@ -497,9 +497,9 @@ class ActorLevels(_HandleAliases):
 
     def __init__(self, aliases_=None, called_from_patcher=False):
         super(ActorLevels, self).__init__(aliases_, called_from_patcher)
-        self.mod_id_levels = defaultdict(dict) #--levels = mod_id_levels[mod][longid]
+        self.mod_id_levels = DefaultFNDict(dict) #--levels = mod_id_levels[mod][longid]
         self.gotLevels = set()
-        self._skip_mods = {u'none', bush.game.master_file.s.lower()}
+        self._skip_mods = {u'none', bush.game.master_file.lower()}
         self._attr_dex = {u'eid': 1, u'level_offset': 4, u'calcMin': 5,
                           u'calcMax': 6}
 
@@ -523,7 +523,7 @@ class ActorLevels(_HandleAliases):
     def writeToMod(self, modInfo):
         """Exports actor levels to specified mod."""
         id_levels = self.mod_id_levels.get(modInfo.ci_key,
-            self.mod_id_levels.get(GPath(u'Unknown'), None))
+            self.mod_id_levels.get(u'Unknown', None))
         if id_levels:
             self.id_stored_data = {b'NPC_': id_levels}
             return super(ActorLevels, self).writeToMod(modInfo)
@@ -550,7 +550,7 @@ class ActorLevels(_HandleAliases):
         lfid = self._coerce_fid(fidMod, csv_fields[3])
         attr_dex = self._update_from_csv(b'NPC_', csv_fields)
         attr_dex[u'flags.pcLevelOffset'] = True
-        self.mod_id_levels[GPath(source)][lfid] = attr_dex
+        self.mod_id_levels[source][lfid] = attr_dex
 
     def _write_rows(self, out, __getter=itemgetter(u'eid',
             u'flags.pcLevelOffset', u'level_offset', u'calcMin', u'calcMax')):
@@ -560,14 +560,14 @@ class ActorLevels(_HandleAliases):
         #Sorted based on mod, then editor ID
         bg_mf = bush.game.master_file
         obId_levels = self.mod_id_levels[bg_mf]
-        for mod, id_levels in _key_sort(self.mod_id_levels):
-            if mod == bg_mf: continue
+        for fn_mod, id_levels in _key_sort(self.mod_id_levels):
+            if fn_mod == bg_mf: continue
             sor = _key_sort(id_levels, keys_dex=[0], values_key=u'eid')
             for longfid, di in sor:
                 eid, isOffset, offset, calcMin, calcMax = __getter(di)
                 if isOffset:
                     out.write(self._row_fmt_str % (
-                        mod, eid, *longfid, offset, calcMin, calcMax))
+                        fn_mod, eid, *longfid, offset, calcMin, calcMax))
                     oldLevels = obId_levels.get(longfid, None)
                     if oldLevels:
                         oldEid,wasOffset,oldOffset,oldCalcMin,oldCalcMax \
