@@ -21,14 +21,15 @@
 #
 # =============================================================================
 
-import copy
 import re
 from collections import defaultdict
 from itertools import chain
+
 # Internal
 from .. import bass, bosh, bush, balt, load_order, bolt, exception
 from ..balt import Links, SeparatorLink, CheckLink
-from ..bolt import GPath, text_wrap, dict_sort, GPath_no_norm
+from ..bolt import FName, text_wrap, dict_sort, \
+    forward_compat_path_to_fn_list, forward_compat_path_to_fn
 from ..gui import Button, CheckBox, HBoxedLayout, Label, LayoutOptions, \
     Spacer, TextArea, TOP, VLayout, EventResult, PanelWin, ListBox, \
     CheckListBox, DeselectAllButton, SelectAllButton, FileOpenMultiple
@@ -214,7 +215,7 @@ class _AliasesPatcherPanel(_PatcherPanel):
         for line in aliases_text.split(u'\n'):
             fields = [s.strip() for s in line.split(u'>>')]
             if len(fields) != 2 or not fields[0] or not fields[1]: continue
-            self._ci_aliases[GPath(fields[0])] = GPath(fields[1])
+            self._ci_aliases[fields[0]] = FName(fields[1])
         self.SetAliasText()
 
     #--Config Phase -----------------------------------------------------------
@@ -222,9 +223,8 @@ class _AliasesPatcherPanel(_PatcherPanel):
         """Get config from configs dictionary and/or set to default."""
         config = super(_AliasesPatcherPanel, self)._getConfig(configs)
         #--Update old configs to use Paths instead of strings.
-        self._ci_aliases = dict(
-            [GPath(i) for i in item] for item in
-            config.get(u'aliases', {}).items())
+        self._ci_aliases = forward_compat_path_to_fn(
+            config.get(u'aliases', {}), value_type=lambda v: FName(u'%s' % v))
         return config
 
     def saveConfig(self, configs):
@@ -386,8 +386,9 @@ class _ListPatcherPanel(_PatcherPanel):
         #--Get new items
         for srcPath in srcPaths:
             folder, fname = srcPath.headTail
-            if folder == srcDir and fname not in self.configItems:
-                self.configItems.append(fname)
+            if folder == srcDir and (
+                    fn := FName(fname.s)) not in self.configItems:
+                self.configItems.append(fn)
         self.SetItems(self.configItems)
 
     def OnRemove(self):
@@ -414,14 +415,16 @@ class _ListPatcherPanel(_PatcherPanel):
         self.remove_empty_sublists = config.get(
             u'remove_empty_sublists',
             self.__class__.default_remove_empty_sublists)
-        self.configItems = copy.deepcopy(config.get(u'configItems', []))
-        self.configChecks = copy.deepcopy(config.get(u'configChecks', {}))
-        self.configChoices = copy.deepcopy(config.get(u'configChoices', {}))
+        self.configItems = forward_compat_path_to_fn_list(
+            config.get(u'configItems', []))
+        self.configChecks = forward_compat_path_to_fn(
+            config.get(u'configChecks', {}))
+        self.configChoices = forward_compat_path_to_fn(
+            config.get(u'configChoices', {}))
         #--Verify file existence
-        self.configItems = [ # fix regression where these became strings
-            srcPath for srcPath in map(GPath_no_norm,
-            self.configItems) if (srcPath in bosh.modInfos or (reCsvExt.search(
-            srcPath.s) and srcPath in patches_set()))]
+        self.configItems = [srcPath for srcPath in self.configItems if (
+                srcPath in bosh.modInfos or (
+                reCsvExt.search(srcPath) and srcPath in patches_set()))]
         if self.__class__.forceItemCheck:
             for item in self.configItems:
                 self.configChecks[item] = True
@@ -432,10 +435,10 @@ class _ListPatcherPanel(_PatcherPanel):
         config = super(_ListPatcherPanel, self).saveConfig(configs)
         #--Toss outdated configCheck data.
         listSet = set(self.configItems)
-        self.configChecks = config[u'configChecks'] = {
-            k: v for k, v in self.configChecks.items() if k in listSet}
-        self.configChoices = config[u'configChoices'] = {
-            k: v for k, v in self.configChoices.items() if k in listSet}
+        config[u'configChecks'] = {k: v for k, v in self.configChecks.items()
+                                   if k in listSet}
+        config[u'configChoices'] = {k: v for k, v in self.configChoices.items()
+                                    if k in listSet}
         config[u'configItems'] = self.configItems
         config[u'autoIsChecked'] = self.autoIsChecked
         config[u'remove_empty_sublists'] = self.remove_empty_sublists

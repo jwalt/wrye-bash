@@ -46,7 +46,8 @@ from .. import bass, bolt, balt, bush, env, load_order, initialization, \
 from ..bass import dirs, inisettings
 from ..bolt import GPath, DataDict, deprint, Path, decoder, AFile, \
     GPath_no_norm, struct_error, dict_sort, top_level_files, os_name, \
-    sig_to_str
+    sig_to_str, FName, FNDict, forward_compat_path_to_fn_list, \
+    forward_compat_path_to_fn
 from ..brec import ModReader, RecordHeader
 from ..exception import AbstractError, ArgumentError, BoltError, BSAError, \
     CancelError, FileError, ModError, PluginsFullError, SaveFileError, \
@@ -2541,13 +2542,14 @@ class ModInfos(FileInfos):
             if (merger_conf := patchConfigs.get('PatchMerger', {})).get(
                     u'isEnabled'):
                 config_checked = merger_conf[u'configChecks']
-                for modName, is_merged in config_checked.items():
+                for modName, is_merged in forward_compat_path_to_fn(
+                        config_checked).items():
                     if is_merged and modName in self:
                         if skip_active and load_order.cached_is_active(
                                 modName): continue
                         merged_.add(modName)
-            imp_mods = patchConfigs.get(u'ImportedMods', ())
-            for imp_name in imp_mods:
+            for imp_name in forward_compat_path_to_fn_list(
+                    patchConfigs.get('ImportedMods', [])):
                 if imp_name in self:
                     if skip_active and load_order.cached_is_active(
                             imp_name): continue
