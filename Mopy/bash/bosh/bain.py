@@ -1705,11 +1705,11 @@ class InstallersData(DataStore):
     installers_dir_skips = set()
 
     def __init__(self):
+        super(InstallersData, self).__init__()
         self.store_dir = bass.dirs[u'installers']
         self.bash_dir.makedirs()
         #--Persistent data
         self.dictFile = bolt.PickleDict(self.bash_dir.join(u'Installers.dat'))
-        self._data = {}
         self.data_sizeCrcDate = bolt.LowerDict()
         from . import converters
         self.converters_data = converters.ConvertersData(bass.dirs[u'bainData'],
@@ -1778,6 +1778,9 @@ class InstallersData(DataStore):
         self.converters_data.load()
         pickl_data = self.dictFile.pickled_data
         self._data = pickl_data.get(u'installers', {})
+        if not isinstance(self._data, bolt.FNDict):
+            self._data = forward_compat_path_to_fn(self._data)
+            # pickl_data[u'installers'] = self._data
         pickle = pickl_data.get(u'sizeCrcDate', {})
         self.data_sizeCrcDate = bolt.LowerDict(pickle) if not isinstance(
             pickle, bolt.LowerDict) else pickle

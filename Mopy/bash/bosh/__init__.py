@@ -1493,6 +1493,9 @@ class DataStore(DataDict):
     """Base class for the singleton collections of infos."""
     store_dir = empty_path # where the data sit, static except for SaveInfos
 
+    def __init__(self):
+        super(DataStore, self).__init__(FNDict())
+
     def delete(self, delete_keys, **kwargs):
         """Deletes member file(s)."""
         full_delete_paths, delete_info = self.files_to_delete(delete_keys,
@@ -1567,13 +1570,13 @@ class TableFileInfos(DataStore):
         deprint(u' bash_dir: %s' % self.bash_dir)
         self.store_dir.makedirs()
         self.bash_dir.makedirs() # self.store_dir may need be set
-        self._data = {} # populated in refresh ()
         # the type of the table keys is always bolt.FName
         self.table = bolt.DataTable(
             bolt.PickleDict(self.bash_dir.join(u'Table.dat')))
 
     def __init__(self, dir_, factory=AFile):
         """Init with specified directory and specified factory type."""
+        super(TableFileInfos, self).__init__()
         self.factory=factory
         self._initDB(dir_)
 
@@ -1809,9 +1812,8 @@ class INIInfos(TableFileInfos):
     file_pattern = re.compile(r'\.ini$', re.I | re.U)
 
     def __init__(self):
-        INIInfos._default_tweaks = {
-            GPath_no_norm(k): DefaultIniInfo(k, v) for k, v in
-            bush.game.default_tweaks.items()}
+        INIInfos._default_tweaks = FNDict((k, DefaultIniInfo(k, v)) for k, v in
+                                          bush.game.default_tweaks.items())
         super(INIInfos, self).__init__(dirs[u'ini_tweaks'],
                                        factory=ini_info_factory)
         self._ini = None

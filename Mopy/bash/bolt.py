@@ -1429,6 +1429,9 @@ class DataDict(object):
     """Mixin class that handles dictionary emulation, assuming that
     dictionary is its '_data' attribute."""
 
+    def __init__(self, data_dict):
+        self._data = data_dict # not final - see for instance InstallersData
+
     def __contains__(self,key):
         return key in self._data
     def __getitem__(self,key):
@@ -1696,10 +1699,10 @@ class Settings(DataDict):
         if self.dictFile:
             res = dictFile.load()
             self.vdata = dictFile.vdata.copy()
-            self._data = dictFile.pickled_data.copy()
+            super(Settings, self).__init__(dictFile.pickled_data.copy())
         else:
             self.vdata = {}
-            self._data = {}
+            super(Settings, self).__init__({})
         self.defaults = {}
 
     def loadDefaults(self, default_settings):
@@ -1874,16 +1877,19 @@ class DataTable(DataDict):
 
     def __init__(self,dictFile):
         """Initialize and read data from dictFile, if available."""
-        self.dictFile = dictFile
+        self.dictFile = dictFile # type: PickleDict
         dictFile.load()
         self.vdata = dictFile.vdata
-        self._data = dictFile.pickled_data
+        self.dictFile.pickled_data = _data = forward_compat_path_to_fn(
+            self.dictFile.pickled_data)
+        super(DataTable, self).__init__(_data)
         self.hasChanged = False ##: move to PickleDict
 
     def save(self):
         """Saves to pickle file."""
         dictFile = self.dictFile
         if self.hasChanged and not dictFile.readOnly:
+            dictFile.pickled_data = self._data # todo decide on pickle data final
             self.hasChanged = not dictFile.save()
 
     def getItem(self,row,column,default=None):
