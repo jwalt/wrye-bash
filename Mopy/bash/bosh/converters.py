@@ -75,7 +75,7 @@ class ConvertersData(DataDict):
         archivesAdd = archives_set.add
         scannedAdd = scanned.add
         for bcf_archive in top_level_files(converters_dir): # scan only files
-            if self.validConverterName(GPath_no_norm(bcf_archive)): ##: drop GPath here!
+            if self.validConverterName(bcf_archive):
                 scannedAdd(convertersJoin(bcf_archive))
         if len(scanned) != len(self.bcfPath_sizeCrcDate):
             return True
@@ -89,9 +89,9 @@ class ConvertersData(DataDict):
 
     #--Converters
     @staticmethod
-    def validConverterName(path_name):
-        return path_name.cext == defaultExt and (
-            path_name.csbody[-4:] == u'-bcf' or u'-bcf-' in path_name.csbody)
+    def validConverterName(fn_conv):
+        return fn_conv.ci_ext == defaultExt and \
+            ((lo := fn_conv.ci_body.lower())[-4:] == u'-bcf') or u'-bcf-' in lo
 
     def refreshConverters(self, progress=None, fullRefresh=False):
         """Refresh converter status, and move duplicate BCFs out of the way."""
@@ -105,8 +105,7 @@ class ConvertersData(DataDict):
             self.bcfPath_sizeCrcDate.clear()
             self.srcCRC_converters.clear()
         for bcf_archive in top_level_files(converters_dir):
-            if self.validConverterName(bcf_archive := GPath_no_norm(
-                    bcf_archive)):  ##: drop GPath here!
+            if self.validConverterName(bcf_archive):
                 bcfPath = convJoin(bcf_archive)
                 size, crc, modified = self.bcfPath_sizeCrcDate.get(bcfPath, (
                     None, None, None))
@@ -123,7 +122,7 @@ class ConvertersData(DataDict):
                         continue
                 self.bcfPath_sizeCrcDate[bcfPath] = (size, crc, modified)
                 if fullRefresh or crc not in bcfCRC_converter:
-                    pending.add(bcf_archive)
+                    pending.add(GPath_no_norm(bcf_archive))
                 else:
                     newData[crc] = bcfCRC_converter[crc]
                     newData[crc].fullPath = bcfPath

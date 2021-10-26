@@ -1590,8 +1590,8 @@ class TableFileInfos(DataStore):
 
     def _list_store_dir(self): # performance intensive
         file_matches_store = self.rightFileType
-        return {GPath_no_norm(x): False for x in
-                top_level_files(self.store_dir) if file_matches_store(x)}
+        return FNDict((x, False) for x in top_level_files(self.store_dir) if
+                      file_matches_store(x))
 
     #--Right File Type?
     @classmethod
@@ -2264,10 +2264,9 @@ class ModInfos(FileInfos):
         """Return a dict specifying if the key is in a ghosted state."""
         fname_to_ghost = super(ModInfos, self)._list_store_dir()
         for mname in list(fname_to_ghost): # initially ghost bits are all False
-            if mname.cext == '.ghost':
-                unghosted = GPath_no_norm(mname.s[:-6])
+            if mname.ci_ext == '.ghost':
                 del fname_to_ghost[mname] # remove the ghost
-                if unghosted in fname_to_ghost:
+                if (unghosted := mname[:-6]) in fname_to_ghost:
                     deprint(f'Both {unghosted} and its ghost exist. The ghost '
                             f'will be ignored but this may lead to undefined '
                             f'behavior - please remove one or the other')

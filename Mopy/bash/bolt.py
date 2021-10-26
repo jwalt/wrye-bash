@@ -390,6 +390,8 @@ class FName(str):
     @functools.cached_property
     def _lower(self): return super(FName, self).lower()
 
+    def lower(self): return self._lower
+
     @functools.cached_property
     def ci_ext(self):
         return FName('' if (dot := self.rfind('.')) == -1 else self[dot:])
@@ -651,7 +653,7 @@ def top_level_items(directory):
         _directory, folders, files = next(os.walk(directory))
     except StopIteration:
         return [], []
-    return folders, files
+    return map(FName, folders), map(FName, files)
 
 # Paths -----------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -963,7 +965,7 @@ class Path(os.PathLike):
     def list(self):
         """For directory: Returns list of files."""
         try:
-            return [GPath_no_norm(x) for x in os.listdir(self._s)]
+            return [*map(FName, os.listdir(self._s))]
         except FileNotFoundError:
             return []
 

@@ -130,12 +130,12 @@ class VORB_NPCSkeletonPatcher(_ASkeletonTweak):
                                                    u'_male')
             list_skel_dir = skeleton_dir.list() # empty if dir does not exist
             skel_nifs = [x for x in list_skel_dir if
-                         x.cs.startswith(u'skel_') and x.cext == u'.nif']
+                         x.lower().startswith('skel_') and x.ci_ext == '.nif']
             skeleton_list = [x for x in skel_nifs
-                             if not x.cs.startswith(u'skel_special_')]
+                             if not x.lower().startswith(u'skel_special_')]
             set_skeleton_list = set(skeleton_list)
-            skeleton_specials = {x.s for x in skel_nifs
-                                 if x not in set_skeleton_list}
+            skeleton_specials = {x for x in skel_nifs if
+                                 x not in set_skeleton_list}
             self._skeleton_list, self._skeleton_specials = (skeleton_list,
                                                             skeleton_specials)
             return skeleton_list, skeleton_specials

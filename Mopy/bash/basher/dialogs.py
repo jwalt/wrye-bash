@@ -24,7 +24,7 @@ from . import bEnableWizard, BashFrame
 from .constants import installercons
 from .. import bass, balt, bosh, bolt, bush, env, load_order
 from ..balt import colors
-from ..bolt import GPath_no_norm, top_level_dirs
+from ..bolt import FName, top_level_dirs
 from ..bosh import faces, ModInfo
 from ..gui import BOTTOM, CancelButton, CENTER, CheckBox, GridLayout, \
     HLayout, Label, LayoutOptions, OkButton, RIGHT, Stretch, TextField, \
@@ -129,7 +129,7 @@ class CreateNewProject(DialogWindow):
         super(CreateNewProject, self).__init__(parent)
         # Build a list of existing directories. The text control will use this
         # to change background color when name collisions occur.
-        self.existingProjects = {GPath_no_norm(x) for x in ##: use idata?
+        self.existingProjects = {x for x in  ##: use idata?
                                  top_level_dirs(bass.dirs[u'installers'])}
         #--Attributes
         self.textName = TextField(self, _(u'New Project Name-#####'))
@@ -165,15 +165,14 @@ class CreateNewProject(DialogWindow):
         self.OnCheckProjectsColorTextCtrl(self.textName.text_content)
 
     def OnCheckProjectsColorTextCtrl(self, new_text):
-        projectName = bolt.GPath(new_text)
-        if projectName in self.existingProjects: #Fill this in. Compare this with the self.existingprojects list
+        projectName = FName(new_text)
+        if existing := projectName in self.existingProjects:
             self.textName.set_background_color(colors[u'default.warn'])
             self.textName.tooltip = _(u'There is already a project with that name!')
-            self.ok_button.enabled = False
         else:
             self.textName.reset_background_color()
             self.textName.tooltip = None
-            self.ok_button.enabled = True
+        self.ok_button.enabled = not existing
 
     def OnCheckBoxChange(self, is_checked=None):
         """Change the DialogWindow icon to represent what the project status

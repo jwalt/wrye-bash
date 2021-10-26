@@ -65,7 +65,7 @@ import wx
 #--Local
 from .. import bush, bosh, bolt, bass, env, load_order, archives
 from ..bolt import GPath, SubProgress, deprint, round_size, dict_sort, \
-    top_level_items, GPath_no_norm, os_name
+    top_level_items, GPath_no_norm, os_name, FName
 from ..bosh import omods, ModInfo
 from ..exception import AbstractError, BoltError, CancelError, FileError, \
     SkipError, UnknownListener
@@ -2647,7 +2647,8 @@ class InstallersList(balt.UIList):
         omodnames = [x for x in filenames if
                      not x in dirs and x.cext in archives.omod_exts]
         converters = {x for x in filenames if
-                      bosh.converters.ConvertersData.validConverterName(x)}
+                      bosh.converters.ConvertersData.validConverterName(
+                          FName('%s' % x))}
         filenames = [x for x in filenames if x in dirs
                      or x.cext in archives.readExts and x not in converters]
         if not (omodnames or converters or filenames): return
@@ -3237,7 +3238,7 @@ class InstallersPanel(BashTab):
         do_refresh = scan_data_dir = scan_data_dir or not self._data_dir_scanned
         refresh_info = None
         if self.frameActivated:
-            folders, files = top_level_items(bass.dirs[u'installers'])
+            folders, files = map(list, top_level_items(bass.dirs[u'installers']))
             omds = [GPath_no_norm(inst_path) for inst_path in files
                     if inst_path.ci_ext in archives.omod_exts]
             if any(inst_path not in omods.failedOmods for inst_path in omds):
@@ -3291,7 +3292,7 @@ class InstallersPanel(BashTab):
                     bosh.omods.OmodFile(omod_path).extractToProject(
                         outDir, SubProgress(progress, i))
                     omodRemoves.add(omod_path)
-                    omod_projects.append(pr_name.s)
+                    omod_projects.append(pr_name)
                 except (CancelError, SkipError):
                     omodMoves.add(omod_path)
                 except:

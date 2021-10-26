@@ -142,11 +142,11 @@ class Installer(ListInfo):
     def getGhosted():
         """Returns map of real to ghosted files in mods directory."""
         dataDir = bass.dirs[u'mods']
-        inodes = dataDir.list()
-        ghosts = [x.body for x in inodes if x.cext == u'.ghost']
+        inodes = dataDir.list() ##: will cache all of those use glob? todo
+        ghosts = [x.ci_body for x in inodes if x.ci_ext == u'.ghost']
         limbo = set(ghosts) & set(inodes) # they exist in both states
         return bolt.LowerDict(
-            (x.s , x.s + u'.ghost') for x in ghosts if x not in limbo)
+            (x, x + u'.ghost') for x in ghosts if x not in limbo)
 
     @staticmethod
     def final_update(new_sizeCrcDate, old_sizeCrcDate, pending, pending_size,
@@ -2131,7 +2131,7 @@ class InstallersData(DataStore):
         new_sizeCrcDate = bolt.LowerDict()
         oldGet = self.data_sizeCrcDate.get
         ghost_norm_get = bolt.LowerDict(
-            (y, x) for x, y in Installer.getGhosted().items()).get
+            (y, str(x)) for x, y in Installer.getGhosted().items()).get
         if bass.settings[u'bash.installers.autoRefreshBethsoft']:
             bethFiles = set()
         else:
@@ -2157,7 +2157,7 @@ class InstallersData(DataStore):
                 oSize, oCrc, oDate = oldGet(rpFile, (0, 0, 0.0))
                 if top_level_espm: # modInfos MUST BE UPDATED
                     try:
-                        modInfo = modInfos[GPath(rpFile)]
+                        modInfo = modInfos[rpFile]
                         new_sizeCrcDate[rpFile] = (modInfo.fsize,
                            modInfo.cached_mod_crc(), modInfo.mtime, asFile)
                         continue
