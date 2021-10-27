@@ -198,19 +198,33 @@ class MasterInfo(object):
                  'stored_size', '_was_esl')
 
     def __init__(self, master_name, master_size, was_esl):
-        self.old_name = self.curr_name = GPath_no_norm(master_name)
         self.stored_size = master_size
-        self.mod_info = modInfos.get(self.curr_name, None)
-        self.is_ghost = self.mod_info and self.mod_info.isGhost
         self._was_esl = was_esl
+        self.old_name = FName(master_name)
+        self.mod_info = self.rename_if_present(master_name)
+        if self.mod_info is None:
+            self.curr_name = FName(master_name)
+            self.is_ghost = False
 
     def get_extension(self):
         """Returns the file extension of this master."""
-        return self.curr_name.cext
+        return self.curr_name.ci_ext
 
-    def set_name(self,name):
-        self.curr_name = GPath_no_norm(name)
-        self.mod_info = modInfos.get(name, None)
+    def rename_if_present(self, str_or_ci):
+        """Set the current info name if a corresponding mod info is present."""
+        mod_info = modInfos.get(str_or_ci, None)
+        if mod_info is not None:
+            self.curr_name = FName(str_or_ci)
+            self.is_ghost = mod_info.isGhost
+        return mod_info
+
+    def disable_master(self): ##: I added setting mod_info to None  TTT
+        ##: We could simplify this down to just unique_key if we had a ModInfo
+        # instance and could pass the new extension in directly
+        esp_name = f'XX{self.curr_name.ci_body}.esp'
+        self.curr_name = ModInfo.unique_name(esp_name)
+        self.is_ghost = False
+        self.mod_info = None
 
     def has_esm_flag(self):
         if self.mod_info:

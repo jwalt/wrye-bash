@@ -562,10 +562,8 @@ class MasterList(_ModsUIList):
         for mi, masterInfo in self.data_store.items():
             newName = settings[u'bash.mods.renames'].get(
                 masterInfo.curr_name, None)
-            #--Rename?
-            if newName and newName in bosh.modInfos:
-                masterInfo.set_name(newName)
-                edited = True
+            #--Rename only if corresponding modInfo is present
+            edited |= bool(masterInfo.rename_if_present(newName))
         #--Done
         if edited: self.SetMasterlistEdited(repopulate=True)
 
@@ -596,20 +594,19 @@ class MasterList(_ModsUIList):
         return (to_rename and ModInfo) or None
 
     def OnLabelEdited(self, is_edit_cancelled, evt_label, evt_index, evt_item):
-        newName = GPath(evt_label)
         #--No change?
-        if newName in bosh.modInfos:
-            masterInfo = self.data_store[evt_item]
-            masterInfo.set_name(newName)
+        masterInfo = self.data_store[evt_item]
+        if masterInfo.rename_if_present(evt_label): # evt_label is the new name
             self.SetMasterlistEdited()
-            settings[u'bash.mods.renames'][masterInfo.old_name] = newName
+            bass.settings[u'bash.mods.renames'][
+                masterInfo.old_name] = masterInfo.curr_name
             # populate, refresh must be called last
             self.PopulateItem(itemDex=evt_index)
             return EventResult.FINISH ##: needed?
-        elif newName == u'':
+        elif evt_label == u'':
             return EventResult.CANCEL
         else:
-            balt.showError(self, _(u'File %s does not exist.') % newName)
+            balt.showError(self, _(u'File %s does not exist.') % evt_label)
             return EventResult.CANCEL
 
     #--GetMasters

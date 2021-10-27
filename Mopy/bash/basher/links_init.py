@@ -839,10 +839,10 @@ def InitScreenLinks():
     if True: #--Convert
         convertMenu = MenuLink(_(u'Convert'))
         image_type = ImageWrapper.typesDict
-        convertMenu.links.append(Screen_ConvertTo(u'jpg', image_type[u'jpg']))
-        convertMenu.links.append(Screen_ConvertTo(u'png', image_type[u'png']))
-        convertMenu.links.append(Screen_ConvertTo(u'bmp', image_type[u'bmp']))
-        convertMenu.links.append(Screen_ConvertTo(u'tif', image_type[u'tif']))
+        convertMenu.links.append(Screen_ConvertTo(u'.jpg', image_type[u'jpg']))
+        convertMenu.links.append(Screen_ConvertTo(u'.png', image_type[u'png']))
+        convertMenu.links.append(Screen_ConvertTo(u'.bmp', image_type[u'bmp']))
+        convertMenu.links.append(Screen_ConvertTo(u'.tif', image_type[u'tif']))
         ScreensList.context_links.append(convertMenu)
     # ScreensList: Global Links
     # File Menu
