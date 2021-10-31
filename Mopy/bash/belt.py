@@ -26,9 +26,12 @@
 import os
 import traceback
 from collections import OrderedDict, defaultdict
+from typing import Optional
+
 from . import ScriptParser  # generic parser class
 from . import bass, bolt, bosh, bush, load_order
 from .ScriptParser import error
+from .bolt import FNDict, FName
 from .env import get_file_version, get_game_version_fallback
 from .gui import CENTER, CheckBox, GridLayout, HBoxedLayout, HLayout, \
     Label, LayoutOptions, RIGHT, Stretch, TextArea, VLayout, HyperlinkLabel, \
@@ -280,10 +283,9 @@ class PageFinish(PageInstaller):
                  notes, iniedits):
         PageInstaller.__init__(self, parent)
         subs = sorted(sublist)
-        plugins = sorted(plugin_enabled)
         #--make the list that will be displayed
         displayed_plugins = [f'{x} -> {plugin_renames[x]}'
-                             if x in plugin_renames else x for x in plugins]
+            if x in plugin_renames else x for x in plugin_enabled]
         parent.parser.choiceIdex += 1
         textTitle = Label(self, _(u'The installer script has finished, and '
                                   u'will apply the following settings:'))
@@ -298,8 +300,8 @@ class PageFinish(PageInstaller):
         self.plugin_selection = CheckListBox(self, choices=displayed_plugins,
                                              ampersand=True)
         self.plugin_selection.on_box_checked.subscribe(self._on_select_plugin)
-        for index,key in enumerate(plugins):
-            if plugin_enabled[key]:
+        for index, (key, do_enable) in enumerate(plugin_enabled.items()):
+            if do_enable:
                 self.plugin_selection.lb_check_at_index(index, True)
                 self._wiz_parent.ret.select_plugins.append(key)
         self._wiz_parent.ret.rename_plugins = plugin_renames
@@ -591,11 +593,12 @@ class WryeParser(ScriptParser.Parser):
             self.parser_finished = False
             ##: Figure out why BAIN insists on including an empty sub-package
             # everywhere. Broke this part of the code, hence the 'if s' below.
-            self.sublist = bolt.LowerDict({
-                s: False for s in installer.subNames if s})
-            self._plugin_enabled = bolt.LowerDict({
-                p: False for sub_plugins in installer.espmMap.values()
-                for p in sub_plugins})
+            self.sublist = bolt.LowerDict.fromkeys( # FIXME FNDict??
+                (s for s in installer.subNames if s), False)
+            # all plugins mapped to their must-install state - initially False
+            self._plugin_enabled = FNDict.fromkeys( # type:FNDict[(f:=FName),f]
+                sorted(fn_ for sub_plugins in installer.espmMap.values()
+                       for fn_ in sub_plugins), False)
         #--Constants
         self.SetConstant(u'SubPackages',u'SubPackages')
         #--Operators
@@ -800,12 +803,9 @@ class WryeParser(ScriptParser.Parser):
                     return True
         return False
 
-    def _resolve_plugin_rename(self, plugin_name):
-        plugin_name = plugin_name.lower()
-        for i in self._plugin_enabled:
-            if plugin_name == i.lower():
-                return i
-        return None
+    def _resolve_plugin_rename(self, plugin_name: str) -> Optional[bolt.FName]:
+        return fn if (fn := FName(plugin_name)) in self._plugin_enabled \
+            else None
 
     # Assignment operators
     def Ass(self, l, r):
@@ -1376,16 +1376,15 @@ class WryeParser(ScriptParser.Parser):
         self._SelectSubPackage(False, subpackage)
 
     def _SelectSubPackage(self, bSelect, subpackage):
-        package = subpackage if subpackage in self.sublist else None
-        if package:
-            self.sublist[package] = bSelect
-            for i in self.installer.espmMap[package]:
+        try:
+            self.sublist[subpackage] = bSelect
+            for fn_espm in self.installer.espmMap[subpackage]:
                 if bSelect:
-                    self._select_plugin(True, i)
+                    self._select_plugin(True, fn_espm)
                 else:
-                    if not self._plugin_in_active_package(i):
-                        self._select_plugin(False, i)
-        else:
+                    if not self._plugin_in_active_package(fn_espm):
+                        self._select_plugin(False, fn_espm)
+        except KeyError:
             error(_(u"Sub-package '%s' is not a part of the installer.") % subpackage)
 
     def kwdSelectAll(self): self._SelectAll(True)
@@ -1421,10 +1420,10 @@ class WryeParser(ScriptParser.Parser):
         self._set_all_values(self._plugin_enabled, should_activate)
 
     def kwd_rename_plugin(self, plugin_name, new_plugin_name):
-        plugin_name = self._resolve_plugin_rename(plugin_name)
+        plugin_name = self._resolve_plugin_rename(plugin_name) # type: FName
         if plugin_name:
             # Keep same extension
-            if plugin_name.lower()[-4:] != new_plugin_name.lower()[-4:]:
+            if plugin_name.ci_ext != new_plugin_name[-4:]:
                 raise ScriptParser.ParserError(_(u'Cannot rename %s to %s: '
                                                  u'the extensions must '
                                                  u'match.') %
