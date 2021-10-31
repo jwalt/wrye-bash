@@ -486,7 +486,7 @@ class ModInfo(FileInfo):
 
     def __init__(self, fullpath, load_cache=False, itsa_ghost=None):
         if itsa_ghost is None and (fullpath.cs[-6:] == u'.ghost'):
-            fullpath = GPath_no_norm(fullpath.s[:-6])
+            fullpath = fullpath.s[:-6]
             self.isGhost = True
         else:  # new_info() path
             self._refresh_ghost_state(regular_path=fullpath,
@@ -841,7 +841,7 @@ class ModInfo(FileInfo):
             # Morrowind does not load attached BSAs at all - they all have to
             # be registered via the INI
             return []
-        bsa_pattern = (re.escape(self.ci_key.sroot) +
+        bsa_pattern = (re.escape(self.ci_key.ci_body) +
                        bush.game.Bsa.attachment_regex +
                        u'\\' + bush.game.Bsa.bsa_extension)
         is_attached = re.compile(bsa_pattern, re.I | re.U).match
@@ -940,7 +940,7 @@ class ModInfo(FileInfo):
         heuristics = self._bsa_heuristics
         last_index = len(heuristics) # last place to sort unwanted BSAs
         def _bsa_heuristic(binf):
-            b_lower = binf.ci_key.csbody
+            b_lower = binf.ci_key.ci_body.lower()
             for i, h in heuristics:
                 if h in b_lower:
                     return i
@@ -949,8 +949,8 @@ class ModInfo(FileInfo):
         # Second heuristic sorting pass: sort BSAs that begin with the body of
         # this plugin before others. This avoids parsing vanilla BSAs for third
         # party plugins, while being a noop for vanilla plugins (stable sort).
-        plugin_prefix = self.ci_key.csbody
-        ret_bsas.sort(key=lambda b: not b.ci_key.cs.startswith(plugin_prefix))
+        plugin_prefix = self.ci_key.ci_body.lower()
+        ret_bsas.sort(key=lambda b: not b.ci_key.lower().startswith(plugin_prefix))
         return ret_bsas
 
     def isMissingStrings(self, cached_ini_info=(None, None, None),
@@ -2468,7 +2468,7 @@ class ModInfos(FileInfos):
         for i,fileName in enumerate(names):
             progress(i,fileName)
             fileInfo = self[fileName]
-            cs_name = fileName.cs
+            cs_name = fileName.lower()
             if cs_name in bush.game.bethDataFiles:
                 if return_results: reasons.append(_(u'Is Vanilla Plugin.'))
                 canMerge = False

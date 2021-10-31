@@ -4350,6 +4350,9 @@ def InitSettings(): # this must run first !
     balt.sizes = bass.settings.get(u'bash.window.sizes', {})
     settings = bass.settings
     settings.loadDefaults(settingDefaults)
+    bass.settings['bash.mods.renames'] = forward_compat_path_to_fn(
+        bass.settings['bash.mods.renames'],
+        value_type=lambda x: FName('%s' % x))
     # The colors dictionary only gets copied into settings if it is missing
     # entirely, copy new entries if needed
     for color_key, color_val in settingDefaults[u'bash.colors'].items():

@@ -210,7 +210,7 @@ class Master_ChangeTo(_Master_EditList):
         #--Save Name
         if masterInfo.rename_if_present(newName.s):
             ##: should be True but needs extra validation -> cycles?
-            bass.settings[u'bash.mods.renames'][master_name] = masterInfo.curr_name ## todo bash.mods.renames was/is Paths
+            bass.settings[u'bash.mods.renames'][master_name] = masterInfo.curr_name
             self.window.SetMasterlistEdited(repopulate=True)
 
 #------------------------------------------------------------------------------

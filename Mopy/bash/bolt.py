@@ -820,10 +820,6 @@ class Path(os.PathLike):
         except AttributeError:
             self._sbody = os.path.basename(self.sroot)
             return self._sbody
-    @property
-    def csbody(self):
-        """For alpha\beta.gamma returns beta as string in normalized case."""
-        return self.sbody.lower()
 
     #--Head, tail
     @property
