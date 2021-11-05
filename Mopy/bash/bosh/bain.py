@@ -1364,7 +1364,7 @@ class InstallerArchive(Installer):
         SubProgress in.
         fileNames: File names (not paths)."""
         if not fileNames:
-            raise ArgumentError(u'No files to extract for %s.' % self)
+            raise ArgumentError(f'No files to extract for {self}.')
         # expand wildcards in fileNames to get actual count of files to extract
         #--Dump file list
         with self.tempList.open(u'w', encoding=u'utf8') as out:
