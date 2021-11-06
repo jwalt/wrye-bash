@@ -2207,7 +2207,8 @@ class ModInfos(FileInfos):
                 start_time = end_time - 60.0
             set_time = load_order.get_free_time(start_time, end_time=end_time)
             self[new_mod].setmtime(set_time)
-        self._lo_wip[previous_index + 1:previous_index + 1] = [new_mod]
+        self._lo_wip[previous_index + 1:previous_index + 1] = [
+            self[new_mod].ci_key]
 
     def cached_lo_last_esm(self):
         last_esm = self._master_esm
@@ -2890,8 +2891,7 @@ class ModInfos(FileInfos):
         if wanted_masters is None:
             wanted_masters = [self._master_esm]
         dir_path = dir_path or self.store_dir
-        new_mod_name = GPath_no_norm(newName)
-        newInfo = self.factory(dir_path.join(new_mod_name))
+        newInfo = self.factory(dir_path.join(newName))
         newFile = ModFile(newInfo)
         newFile.tes4.masters = wanted_masters
         if bashed_patch:
@@ -2902,11 +2902,10 @@ class ModInfos(FileInfos):
             newFile.tes4.flags1.eslFile = True
         newFile.safeSave()
         if dir_path == self.store_dir:
-            self.new_info(new_mod_name,
-                          notify_bain=True)  # notify just in case...
+            self.new_info(newName, notify_bain=True)  # notify just in case...
             last_selected = load_order.get_ordered(selected)[
                 -1] if selected else self._lo_wip[-1]
-            self.cached_lo_insert_after(last_selected, new_mod_name)
+            self.cached_lo_insert_after(last_selected, newName)
             self.cached_lo_save_lo()
             self.refresh(refresh_infos=False)
 
