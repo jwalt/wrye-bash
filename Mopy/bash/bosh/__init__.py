@@ -302,11 +302,6 @@ class FileInfo(AFile, ListInfo):
     @property
     def mtime(self): return self._file_mod_time
     #--------------------------------------------------------------------------
-    #--File type tests ##: Belong to ModInfo!
-    #--Note that these tests only test extension, not the file data.
-    def isMod(self): # TODO(ut) obsolete - replace by inheritance
-        return ModInfos.rightFileType(self.ci_key)
-
     def setmtime(self, set_time=0.0, crc_changed=False):
         """Sets mtime. Defaults to current value (i.e. reset).
 
@@ -451,14 +446,14 @@ class FileInfo(AFile, ListInfo):
     def snapshot_dir(self):
         return self.get_store().bash_dir.join(u'Snapshots')
 
-    def validate_name(self, name_str):
+    def validate_name(self, name_str, check_store=True):
         # disallow extension change but not if no-extension info type
         check_ext = name_str and self.__class__._valid_exts_re
         if check_ext and not name_str.lower().endswith(self._file_key.cext):
             return _(u'%s: Incorrect file extension (must be %s)') % (
                 name_str, self._file_key.ext), None
         #--Else file exists?
-        if self.info_dir.join(name_str).exists(): ##: check using file_infos?
+        if check_store and self.info_dir.join(name_str).exists():
             return _(u'File %s already exists.') % name_str, None
         return self.__class__.validate_filename_str(name_str)
 
@@ -1778,12 +1773,14 @@ class FileInfos(TableFileInfos):
         srcPath.moveTo(destPath)
 
     #--Copy
-    def copy_info(self, fileName, destDir, destName=empty_path, set_mtime=None):
+    def copy_info(self, fileName, destDir, destName=empty_path, set_mtime=None,
+                  save_lo_cache=False):
         """Copies member file to destDir. Will overwrite! Will update
         internal self.data for the file if copied inside self.info_dir but the
         client is responsible for calling the final refresh of the data store.
         See usages.
 
+        :param save_lo_cache: ModInfos only save the mod infos load order cache
         :param set_mtime: if None self[fileName].mtime is copied to destination
         """
         destDir.makedirs()
@@ -3078,6 +3075,14 @@ class ModInfos(FileInfos):
         bash_frame.warn_corrupted(warn_mods=True, warn_strings=True)
         return moved
 
+    def copy_info(self, fileName, destDir, destName=empty_path, set_mtime=None,
+                  save_lo_cache=False):
+        """Copies modfile and optionally inserts into load order cache."""
+        super(ModInfos, self).copy_info(fileName, destDir, destName, set_mtime)
+        if self.store_dir == destDir:
+            self.cached_lo_insert_after(fileName, destName)
+        if save_lo_cache: self.cached_lo_save_lo()
+
     #--Mod info/modify --------------------------------------------------------
     def getVersion(self, fileName): ##: move to ModInfo?
         """Extracts and returns version number for fileName from header.hedr.description."""
@@ -3359,7 +3364,8 @@ class SaveInfos(FileInfos):
         # now add backups and cosaves backups
         super(SaveInfos, self)._additional_deletes(fileInfo, toDelete)
 
-    def copy_info(self, fileName, destDir, destName=empty_path, set_mtime=None):
+    def copy_info(self, fileName, destDir, destName=empty_path, set_mtime=None,
+                  save_lo_cache=False):
         """Copies savefile and associated cosaves file(s)."""
         super(SaveInfos, self).copy_info(fileName, destDir, destName, set_mtime)
         self._co_copy_or_move(fileName, destDir, destName or fileName)
