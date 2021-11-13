@@ -1566,7 +1566,8 @@ class DataStore(DataDict):
             env.shellMove(sources, destinations, parent=window)
         except (CancelError, SkipError):
             pass
-        return {d.tail for d in destinations if d.exists()}
+        return forward_compat_path_to_fn_list(
+            {d.stail for d in destinations if d.exists()}, ret_type=set)
 
 class TableFileInfos(DataStore):
     _bain_notify = True # notify BAIN on deletions/updates ?
