@@ -24,12 +24,12 @@ import os
 import re
 
 from . import bass
-from .bolt import GPath, deprint, popen_common, os_name
+from .bolt import FName, deprint, popen_common, os_name, FNDict
 from .exception import StateError
 
 exe7z = u'7z.exe' if os_name == u'nt' else u'7z'
 defaultExt = u'.7z'
-writeExts = {defaultExt: u'7z', u'.zip': u'zip'}
+writeExts = FNDict({defaultExt: u'7z', u'.zip': u'zip'})
 readExts = {u'.rar', u'.001'}
 readExts.update(writeExts)
 omod_exts = {u'.omod', u'.fomod'}
@@ -97,8 +97,8 @@ def extract7z(src_archive, extract_dir, progress=None, readExtensions=None,
         for line in out.readlines():
             maExtracting = regExtractMatch(line)
             if maExtracting:
-                extracted = GPath(maExtracting.group(1).strip())
-                if readExtensions and extracted.cext in readExtensions:
+                extracted = FName(maExtracting.group(1).strip())
+                if readExtensions and extracted.ci_ext in readExtensions:
                     subArchives.append(extracted)
                 if not progress: continue
                 progress(index, f'{src_archive.tail}\n' + _(
@@ -122,12 +122,12 @@ def wrapPopenOut(fullPath, wrapper, errorMsg):
 
 #  WIP: http://sevenzip.osdn.jp/chm/cmdline/switches/method.htm
 def _compressionSettings(fn_archive, blockSize, isSolid):
-    archiveType = writeExts.get(fn_archive.cext)
+    archiveType = writeExts.get(fn_archive.ci_ext)
     if not archiveType:
         #--Always fall back to using the defaultExt
-        fn_archive = GPath(fn_archive.sbody + defaultExt).tail
+        fn_archive = FName(fn_archive.ci_body + defaultExt)
         archiveType = writeExts[defaultExt]
-    if fn_archive.cext in noSolidExts: # zip
+    if fn_archive.ci_ext in noSolidExts: # zip
         solid = u''
     else:
         if isSolid:

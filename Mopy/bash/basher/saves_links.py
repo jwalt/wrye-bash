@@ -33,7 +33,7 @@ from .dialogs import ImportFaceDialog
 from .. import bass, bosh, bolt, balt, bush, load_order, initialization
 from ..balt import EnabledLink, AppendableLink, Link, CheckLink, ChoiceLink, \
     ItemLink, SeparatorLink, OneItemLink, UIList_Rename
-from ..bolt import GPath, SubProgress
+from ..bolt import GPath, SubProgress, FName
 from ..bosh import faces
 from ..exception import ArgumentError, BoltError, ModError, AbstractError
 from ..gui import BusyCursor, ImageWrapper, FileSave
@@ -390,13 +390,12 @@ class Save_Renumber(EnabledLink):
         if newNumber is None: return
         old_names = set()
         new_names = set()
-        for old_file_path, maPattern, sinf in self._matches:
+        for fn_save, maPattern, sinf in self._matches:
             s_groups = maPattern.groups()
             if not s_groups[1]: continue
-            newFileName = f'{s_groups[0]}{newNumber:d}{s_groups[2]}'
-            if newFileName != old_file_path:
-                new_file_path = GPath(newFileName)
-                if self.window.try_rename(sinf, new_file_path, new_names,
+            newFileName = FName(f'{s_groups[0]}{newNumber:d}{s_groups[2]}')
+            if newFileName != fn_save:
+                if self.window.try_rename(sinf, newFileName, new_names,
                                           old_names):
                     break
                 newNumber += 1

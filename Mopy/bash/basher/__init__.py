@@ -65,7 +65,7 @@ import wx
 #--Local
 from .. import bush, bosh, bolt, bass, env, load_order, archives
 from ..bolt import GPath, SubProgress, deprint, round_size, dict_sort, \
-    top_level_items, GPath_no_norm, os_name, FName
+    top_level_items, GPath_no_norm, os_name, FName, forward_compat_path_to_fn
 from ..bosh import omods, ModInfo
 from ..exception import AbstractError, BoltError, CancelError, FileError, \
     SkipError, UnknownListener
@@ -1674,7 +1674,7 @@ class ModDetails(_ModsSavesDetails):
     def DoSave(self):
         modInfo = self.modInfo
         #--Change Tests
-        changeName = (self.fileStr != modInfo.ci_key)
+        changeName = ((file_str := self.fileStr.strip()) != modInfo.ci_key)
         changeDate = (self.modifiedStr != format_date(modInfo.mtime))
         changeHedr = (self.authorStr != modInfo.header.author or
                       self.descriptionStr != modInfo.header.description)
@@ -1697,7 +1697,7 @@ class ModDetails(_ModsSavesDetails):
         modInfo.makeBackup()
         #--Change Name?
         if changeName:
-            oldName,newName = modInfo.ci_key,GPath(self.fileStr.strip())
+            oldName,newName = modInfo.ci_key, file_str
             #--Bad name?
             if (bosh.modInfos.isBadFileName(newName) and
                 not balt.askContinue(self,_(
@@ -2152,8 +2152,8 @@ class SaveList(balt.UIList):
         return EventResult.CANCEL # needed ! clears new name from label on exception
 
     def try_rename(self, saveinf, new_root, to_select=None, to_del=None,
-                   item_edited=None, ext=u''):
-        newFileName = saveinf.unique_key(new_root, ext)
+                   item_edited=None, force_ext=''):
+        newFileName = saveinf.unique_key(new_root, force_ext)
         oldName = self._try_rename(saveinf, newFileName)
         if oldName:
             if to_select is not None: to_select.add(newFileName)
@@ -2184,7 +2184,7 @@ class SaveList(balt.UIList):
         sinf = self._get_info_clicked(lb_dex_and_flags, on_icon=True)
         if not sinf: return
         # Don't allow enabling backups, the game won't read them either way
-        if (fn_item := sinf.ci_key).cext == u'.bak':
+        if (fn_item := sinf.ci_key).ci_ext == u'.bak':
             balt.showError(self, _(u'You cannot enable save backups.'))
             return
         enabled_ext = bush.game.Ess.ext
@@ -2197,7 +2197,7 @@ class SaveList(balt.UIList):
             return
         do_enable = not sinf.is_save_enabled()
         extension = enabled_ext if do_enable else disabled_ext
-        rename_res = self.try_rename(sinf, fn_item.root, ext=extension)
+        rename_res = self.try_rename(sinf, fn_item.ci_body,force_ext=extension)
         if rename_res:
             self.RefreshUI(redraw=[rename_res[1]], to_del=[fn_item])
 
@@ -2365,7 +2365,7 @@ class SaveDetails(_ModsSavesDetails):
         #--Change Name?
         to_del = set()
         if changeName:
-            newName = GPath(self.fileStr.strip()).root
+            newName = FName(self.fileStr.strip()).ci_body
             # if you were wondering: OnFileEdited checked if file existed,
             # and yes we recheck below, in Mod/BsaDetails we don't - filesystem
             # APIs might warn user (with a dialog hopefully) for an overwrite,
@@ -2749,7 +2749,7 @@ class InstallersList(balt.UIList):
             max_order = sorted_inst[-1].order + 1 #place it after last selected
         else:
             max_order = None
-        new_marker = GPath(u'====')
+        new_marker = FName(u'====')
         try:
             index = self.GetIndex(new_marker)
         except KeyError: # u'====' not found in the internal dictionary
@@ -2871,7 +2871,7 @@ class InstallersDetails(_SashDetailsPanel):
         self._update_fomod_state()
         #--Espms
         # sorted list of the displayed installer espm names - esms sorted first
-        self.espm_checklist_fns = [] # type: List[bolt.Path]
+        self.espm_checklist_fns = [] # type: List[FName]
         self.gEspmList = CheckListBox(espmsPanel, isExtended=True)
         self.gEspmList.on_box_checked.subscribe(self._on_check_plugin)
         self.gEspmList.on_mouse_left_dclick.subscribe(
@@ -2960,9 +2960,9 @@ class InstallersDetails(_SashDetailsPanel):
                 self.gEspmList.lb_clear()
             else:
                 fns = self.espm_checklist_fns = sorted(installer.espms, key=lambda x: (
-                    x.cext != u'.esm', x)) # esms first then alphabetically
+                    x.ci_ext != u'.esm', x)) # esms first then alphabetically
                 espm_acti = {['', '*'][installer.isEspmRenamed(
-                    x)] + x.s: x not in installer.espmNots for x in fns}
+                    x)] + x: x not in installer.espmNots for x in fns}
                 self.gEspmList.set_all_items_keep_pos(espm_acti)
             #--Comments
             self.gComments.text_content = installer.comments
@@ -3105,7 +3105,7 @@ class InstallersDetails(_SashDetailsPanel):
             lb_selection_dex).replace(u'&&', u'&')
         if plugin_name[0] == u'*':
             plugin_name = plugin_name[1:]
-        return GPath_no_norm(plugin_name)
+        return FName(plugin_name)
 
     def _on_plugin_filter_dclick(self, selected_index):
         """Handles double-clicking on a plugin in the plugin filter."""
@@ -3422,7 +3422,7 @@ class ScreensList(balt.UIList):
 
     def try_rename(self, scrinf, root, numStr, to_select=None, to_del=None,
                    item_edited=None):
-        newName = GPath(root + numStr + scrinf.abs_path.ext) # TODO: refactor ScreenInfo.unique_key()
+        newName = FName(root + numStr + scrinf.ci_key.ci_ext) # TODO: add ScreenInfo.unique_key()
         if scrinf.get_store().store_dir.join(newName).exists():
             return None # break
         oldName = self._try_rename(scrinf, newName)
@@ -3563,11 +3563,7 @@ class BSADetails(_EditableMixinOnFileInfos, SashPanel):
     @balt.conversation
     def DoSave(self):
         """Event: Clicked Save button."""
-        #--Change Tests
-        changeName = (self.fileStr != self._bsa_info.ci_key)
-        #--Change Name?
-        if changeName:
-            newName = GPath(self.fileStr.strip())
+        if (newName := FName(self.fileStr.strip())) != self._bsa_info.ci_key:
             if self.panel_uilist.try_rename(self._bsa_info, newName):
                 self.panel_uilist.RefreshUI(detail_item=self.file_info.ci_key)
 

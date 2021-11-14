@@ -125,7 +125,7 @@ class ListInfo(object):
             if not (root or num_str):
                 pass # will return the error message at the end
             elif cls._has_digits: return root, num_str
-            else: return GPath(name_str), root # default u''
+            else: return FName(name_str), root
         return (_(u'Bad extension or file root: ') + name_str), None
 
     @classmethod
@@ -142,21 +142,19 @@ class ListInfo(object):
     # Generate unique filenames when duplicating files etc
     @staticmethod
     def _new_name(base_name, count):
-        r, e = base_name.sroot, base_name.ext
-        if not count:
-            return GPath(r + e)
-        return GPath(r + (u' (%d)' % count) + e)
+        r, e = os.path.splitext(base_name)
+        return f'{r} ({count}){e}'
 
     @classmethod
     def unique_name(cls, name_str, check_exists=False):
-        base_name = cls._new_name(GPath(name_str), 0)
+        base_name = name_str
         unique_counter = 0
         store = cls.get_store()
         while (store.store_dir.join(name_str).exists() if check_exists else
-                GPath(name_str) in store):
+                name_str in store): # must wrap a FNDict
             unique_counter += 1
             name_str = cls._new_name(base_name, unique_counter)
-        return GPath(name_str) # gpath markers and projects
+        return FName(name_str)
 
     # Gui renaming stuff ------------------------------------------------------
     @classmethod
@@ -429,7 +427,7 @@ class FileInfo(AFile, ListInfo):
         #--New
         snapLast[-1] = (u'%0'+str(len(snapLast[-1]))+u'd') % (int(snapLast[-1])+1,)
         destName = root+separator+(u'.'.join(snapLast))+ext
-        return destDir,destName,(root+u'*'+ext).s
+        return destDir, destName, f'{root}*{ext}'
 
     @property
     def backup_dir(self):
@@ -1531,7 +1529,12 @@ class DataStore(DataDict):
             if tup[0] == tup[1] or not tup[0].exists():
                 rename_paths.remove(tup)
         env.shellMove(*list(zip(*rename_paths)))
-        return rename_paths[0][0].tail
+        old_key = member_info.ci_key
+        member_info.ci_key = FName(newName) ##: we should pass an FName in
+        #--FileInfos
+        self[newName] = member_info
+        del self[old_key]
+        return old_key
 
     @property
     def bash_dir(self):
@@ -1583,7 +1586,7 @@ class TableFileInfos(DataStore):
         info = self[fileName] = self.factory(self.store_dir.join(fileName),
             load_cache=True, itsa_ghost=itsa_ghost)
         if owner is not None:
-            info.set_table_prop('installer', owner)
+            info.set_table_prop('installer', '%s' % owner)
         if notify_bain:
             self._notify_bain(changed={info.abs_path})
         return info
@@ -1741,14 +1744,9 @@ class FileInfos(TableFileInfos):
         """Renames member file from oldName to newName."""
         #--Update references
         #--File system
-        super(FileInfos, self).rename_operation(member_info, newName)
-        old_key = member_info.ci_key
+        old_key = super(FileInfos, self).rename_operation(member_info, newName)
         #--FileInfo
-        member_info.ci_key = FName(newName)
         member_info.abs_path = self.store_dir.join(newName)
-        #--FileInfos
-        self[newName] = member_info
-        del self[old_key]
         self.table.moveRow(old_key, newName)
         # self[newName]._mark_unchanged() # not needed with shellMove !
         return old_key
