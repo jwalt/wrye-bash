@@ -1208,7 +1208,7 @@ class INIInfo(IniFile):
                         if self_installer is None: continue
                         for ini_info in infos.values():
                             if self is ini_info: continue
-                            if self_installer != ini_info.get_table_prop(
+                            if self_installer != ini_info.get_table_prop( ##: case sensitive??
                                     u'installer'): continue
                             # It's from the same installer
                             if self._incompatible(ini_info): continue
@@ -1565,7 +1565,7 @@ class TableFileInfos(DataStore):
         self.store_dir.makedirs()
         self.bash_dir.makedirs() # self.store_dir may need be set
         self._data = {} # populated in refresh ()
-        # the type of the table keys is always bolt.Path
+        # the type of the table keys is always bolt.FName
         self.table = bolt.DataTable(
             bolt.PickleDict(self.bash_dir.join(u'Table.dat')))
 
@@ -1598,7 +1598,7 @@ class TableFileInfos(DataStore):
     def rightFileType(cls, fileName):
         """Check if the filetype (extension) is correct for subclass.
 
-        :type fileName: bolt.Path | str
+        :type fileName: bolt.FName | str
         :rtype: _sre.SRE_Match | None"""
         ##: This shouldn't take bytes, ensure it doesn't (especially wrt. to
         # pickle-related usages)

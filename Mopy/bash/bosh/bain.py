@@ -3002,8 +3002,8 @@ class InstallersData(DataStore):
 
     def ipackages(self, installerKeys):
         """Remove markers from installerKeys.
-        :type installerKeys: collections.Iterable[bolt.Path]
-        :rtype: list[bolt.Path]
+        :type installerKeys: collections.Iterable[bolt.FName]
+        :rtype: list[bolt.FName]
         """
         return (x for x in installerKeys if not self[x].is_marker())
 
