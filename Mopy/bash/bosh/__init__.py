@@ -449,9 +449,9 @@ class FileInfo(AFile, ListInfo):
     def validate_name(self, name_str, check_store=True):
         # disallow extension change but not if no-extension info type
         check_ext = name_str and self.__class__._valid_exts_re
-        if check_ext and not name_str.lower().endswith(self._file_key.cext):
+        if check_ext and not name_str.lower().endswith(self.ci_key.ci_ext.lower()):
             return _(u'%s: Incorrect file extension (must be %s)') % (
-                name_str, self._file_key.ext), None
+                name_str, self.ci_key.ci_ext), None
         #--Else file exists?
         if check_store and self.info_dir.join(name_str).exists():
             return _(u'File %s already exists.') % name_str, None
@@ -851,7 +851,7 @@ class ModInfo(FileInfo):
     def get_ini_name(self):
         """Returns the name of the INI matching this plugin, if it were to
         exist."""
-        return self._file_key.sbody + '.ini'
+        return self.ci_key.ci_body + '.ini'
 
     def _string_files_paths(self, lang):
         # type: (str) -> Iterable[str]
@@ -1333,7 +1333,7 @@ class SaveInfo(FileInfo):
 
     def is_save_enabled(self):
         """True if I am enabled."""
-        return self.abs_path.cext == bush.game.Ess.ext
+        return self.ci_key.ci_ext == bush.game.Ess.ext
 
     def readHeader(self):
         """Read header from file and set self.header attribute."""
