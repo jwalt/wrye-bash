@@ -169,9 +169,9 @@ def setup_locale(cli_lang, _wx):
                              u"family '%s', will fall back to "
                              u"'%s'" % (wanted_prefix, target_name := 'en_US'))
     bolt.deprint(f'{target_name=}')
-    if '.' in target_name:
-        target_name = target_name.split('.', 1)[0]
-    target_name += '.UTF-8'
+    # if '.' in target_name:
+    #     target_name = target_name.split('.', 1)[0]
+    # target_name += '.UTF-8'
     lang_info = _wx.Locale.FindLanguageInfo(target_name)
     target_language = lang_info.Language
     target_canonical = lang_info.CanonicalName
