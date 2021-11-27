@@ -108,6 +108,7 @@ def setup_locale(cli_lang, _wx):
     __init_gui_images(_wx)
     # Set the wx language - otherwise we will crash when loading any images
     cli_target = cli_lang and _wx.Locale.FindLanguageInfo(cli_lang)
+    bolt.deprint(f'{cli_target=}')
     if cli_target:
         # The user specified a language that wx recognizes
         target_name = cli_target.CanonicalName
@@ -121,7 +122,6 @@ def setup_locale(cli_lang, _wx):
         bolt.deprint(f'wx gave back {target_name}')
     # We now have a language that wx supports, but we don't know if WB supports
     # it - so check that next
-    trans_path = __get_translations_dir()
     # target_name is '' for target_language == _wx.LANGUAGE_DEFAULT == 0
     # (after setlocale(locale.LC_ALL, 'C') was called, duh
     # English is the default, so it doesn't have a translation file
@@ -130,6 +130,7 @@ def setup_locale(cli_lang, _wx):
     if not target_name or target_name.startswith(u'en_'): # en_ gives en_GB on my system
         target_name = 'en_US'
     else:
+        trans_path = __get_translations_dir()
         supported_l10ns = [l[:-3] for l in os.listdir(trans_path) if
                            l[-3:] == u'.po']
         # Check if we support this exact language or any similar
@@ -167,11 +168,19 @@ def setup_locale(cli_lang, _wx):
                 bolt.deprint(u"wxPython does not support the language "
                              u"family '%s', will fall back to "
                              u"'%s'" % (wanted_prefix, target_name := 'en_US'))
+    bolt.deprint(f'{target_name=}')
+    if '.' in target_name:
+        target_name = target_name.split('.', 1)[0]
+    target_name += '.UTF-8'
     lang_info = _wx.Locale.FindLanguageInfo(target_name)
     target_language = lang_info.Language
+    target_canonical = lang_info.CanonicalName
     target_locale = _wx.Locale(target_language)
-    bolt.deprint(f"Set wxPython locale to '{target_name}: getlocale result "
-                 f"{locale.getlocale()}'")
+    bolt.deprint(f"Set wxPython locale to '{target_name=}, "
+                 f"{target_canonical=}: getlocale result "
+                 f"{locale.getlocale()} / "
+                 f"{target_locale=}: _wx.Locale result "
+                 )
     # Next, set the Wrye Bash locale based on the one we grabbed from wx
     if po is mo is None:
         # We're using English or don't have a translation file - either way,
