@@ -3464,7 +3464,7 @@ class BSAInfos(FileInfos):
             def _reset_bsa_mtime(self):
                 if bush.game.Bsa.allow_reset_timestamps and inisettings[
                     u'ResetBSATimestamps']:
-                    default_mtime = bush.game.Bsa.redate_dict[self.ci_key.s]
+                    default_mtime = bush.game.Bsa.redate_dict[self.ci_key]
                     if self._file_mod_time != default_mtime:
                         self.setmtime(default_mtime)
 

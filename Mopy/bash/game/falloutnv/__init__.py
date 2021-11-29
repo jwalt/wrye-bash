@@ -22,8 +22,6 @@
 # =============================================================================
 """GameInfo override for Fallout NV."""
 
-from collections import defaultdict
-
 from ..fallout3 import Fallout3GameInfo
 from ... import brec, bolt
 from ...brec import MreFlst, MreGlob
@@ -61,7 +59,7 @@ class FalloutNVGameInfo(Fallout3GameInfo):
         url_tip = u'http://nvse.silverlock.org/'
 
     class Bsa(Fallout3GameInfo.Bsa):
-        redate_dict = defaultdict(lambda: 1136066400, { # '2006-01-01'
+        redate_dict = bolt.DefaultFNDict(lambda: 1136066400, { # '2006-01-01'
             u'Fallout - Meshes.bsa': 1104530400,    # '2005-01-01'
             u'Fallout - Meshes2.bsa': 1104616800,   # '2005-01-02'
             u'Fallout - Misc.bsa': 1104703200,      # '2005-01-03'
