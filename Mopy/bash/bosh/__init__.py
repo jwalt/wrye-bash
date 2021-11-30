@@ -2284,7 +2284,7 @@ class ModInfos(FileInfos):
 
         See usages for how to use the refresh_infos and _modTimesChange params.
         _modTimesChange is not strictly needed after the lo rewrite, as
-        games.Game#load_order_changed will always return True for timestamp
+        games.LoGame.load_order_changed will always return True for timestamp
         games - kept to help track places in the code where timestamp load
         order may change.
          NB: if an operation we performed changed the load order we do not want
@@ -3192,7 +3192,8 @@ class ModInfos(FileInfos):
         newSaves directory and set oblivion version."""
         arcPath, newPath = (dirs[u'saveBase'].join(saves) for saves in
                             (arcSaves, newSaves))
-        load_order.swap(arcPath, newPath)
+        if load_order.swap(arcPath, newPath):
+            self.refreshLoadOrder(unlock_lo=True)
         # Swap Oblivion version to memorized version
         voNew = saveInfos.profiles.getItem(newSaves, u'vOblivion', None)
         if voNew is None:
