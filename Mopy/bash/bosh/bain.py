@@ -347,8 +347,10 @@ class Installer(ListInfo):
             self.dirty_sizeCrc = bolt.LowerDict(
                 (u'%s' % x, y) for x, y in self.dirty_sizeCrc.items())
         if not isinstance(self.archive, str):
-            deprint(f'{repr(self.archive)} in Installers.dat')
-            self.archive = self.archive.decode('utf-8')
+            if isinstance(self.archive, Path): self.archive = self.archive.s
+            else:
+                deprint(f'{repr(self.archive)} in Installers.dat')
+                self.archive = self.archive.decode('utf-8')
         if rescan:
             dest_scr = self.refreshBasic(bolt.Progress(),
                                          recalculate_project_crc=False)
