@@ -50,7 +50,7 @@ from .bolt import sig_to_str
 # Game instance providing load order operations API
 from . import _games_lo
 
-_game_handle = None # type: _games_lo.Game
+_game_handle = None # type: _games_lo.LoGame
 _plugins_txt_path = _loadorder_txt_path = _lord_pickle_path = None
 # Load order locking
 locked = False
@@ -423,7 +423,8 @@ def _restore_lo(index_move):
                    __index_move=index_move, quiet=True)
 
 # API helpers
-def swap(old_dir, new_dir): _game_handle.swap(old_dir, new_dir)
+def swap(old_dir, new_dir):
+    return _game_handle.swap(old_dir, new_dir)
 
 def must_be_active_if_present():
     return set(_game_handle.must_be_active_if_present) | (

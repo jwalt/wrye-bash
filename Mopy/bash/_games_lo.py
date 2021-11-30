@@ -182,7 +182,7 @@ class FixInfo(object):
             msg += _pl(self.act_reordered[1], u'\nto:\n', joint=u'\n')
         bolt.deprint(msg)
 
-class Game(object):
+class LoGame(object):
     """API for setting, getting and validating the active plugins and the
     load order (of all plugins) according to the game engine (in principle)."""
     allow_deactivate_master = False
@@ -198,7 +198,7 @@ class Game(object):
     _star = False # whether plugins.txt uses a star to denote an active plugin
 
     def __init__(self, mod_infos, plugins_txt_path):
-        super(Game, self).__init__()
+        super(LoGame, self).__init__()
         self.plugins_txt_path = plugins_txt_path # type: bolt.Path
         self.mod_infos = mod_infos # this is bosh.ModInfos, must be up to date
         self.master_path = mod_infos._master_esm # type: bolt.Path
@@ -357,7 +357,7 @@ class Game(object):
         """Save current plugins into oldPath directory and load plugins from
         newPath directory (if present)."""
         # If this game has no plugins.txt, don't try to swap it
-        if not self.__class__.has_plugins_txt: return
+        if not self.__class__.has_plugins_txt: return False
         # Save plugins.txt inside the old (saves) directory
         if self.plugins_txt_path.exists():
             self.plugins_txt_path.copyTo(old_dir.join(u'plugins.txt'))
@@ -366,6 +366,8 @@ class Game(object):
         if move.exists():
             move.copyTo(self.plugins_txt_path)
             self.plugins_txt_path.mtime = time.time() # copy will not change mtime, bad
+            return True
+        return False
 
     def in_master_block(self, minf): # minf is a master or mod info
         """Return true for files that load in the masters' block."""
@@ -674,11 +676,11 @@ class Game(object):
                 if acti_file:
                     bolt.deprint(f' - Active plugins: {acti_file}')
 
-class INIGame(Game):
+class INIGame(LoGame):
     """Class for games which use an INI section to determine parts of the load
-    order. Meant to be used in multiple inheritance with other Game types, be
+    order. Meant to be used in multiple inheritance with other LoGame types, be
     sure to put INIGame first, as a few of its methods delegate to super
-    implementations, which are abstract in the Game base class.
+    implementations, which are abstract in the LoGame base class.
 
     To use an INI section to specify active plugins, change ini_key_actives.
     To use an INI section to specify load order, change ini_key_lo. You can
@@ -860,11 +862,14 @@ class INIGame(Game):
             if move_ini.is_file():
                 self._write_ini(cached_ini, ini_key, self._read_ini(
                     self._mk_ini(move_ini), ini_key))
+                return True
+            return False
+        changed = False
         if self._handles_actives:
-            _do_swap(self._cached_ini_actives, self.ini_key_actives)
+            changed = _do_swap(self._cached_ini_actives, self.ini_key_actives)
         if self._handles_lo:
-            _do_swap(self._cached_ini_lo, self.ini_key_lo)
-        super(INIGame, self).swap(old_dir, new_dir)
+            changed |= _do_swap(self._cached_ini_lo, self.ini_key_lo)
+        return super(INIGame, self).swap(old_dir, new_dir) or changed
 
     def get_acti_file(self):
         if self._handles_actives:
@@ -884,7 +889,7 @@ class INIGame(Game):
         raise exception.AbstractError(u'INIGame does not support _set_lo_file '
                                       u'right now')
 
-class TimestampGame(Game):
+class TimestampGame(LoGame):
     """Oblivion and other games where load order is set using modification
     times.
 
@@ -1012,7 +1017,7 @@ class Morrowind(INIGame, TimestampGame):
     def in_master_block(self, minf):
         return minf.get_extension() == u'.esm'
 
-class TextfileGame(Game):
+class TextfileGame(LoGame):
 
     def __init__(self, mod_infos, plugins_txt_path, loadorder_txt_path):
         super(TextfileGame, self).__init__(mod_infos, plugins_txt_path)
@@ -1054,6 +1059,8 @@ class TextfileGame(Game):
         if move.exists():
             move.copyTo(self.loadorder_txt_path)
             self.loadorder_txt_path.mtime = time.time() # update mtime to trigger refresh
+            return True
+        return False
 
     def get_acti_file(self):
         return self.plugins_txt_path
@@ -1178,7 +1185,7 @@ class TextfileGame(Game):
                    f'supplied load order ({_pl(acti)})'
         return u''
 
-class AsteriskGame(Game):
+class AsteriskGame(LoGame):
 
     max_espms = 254
     max_esls = 4096 # hard limit, game runs out of fds sooner, testing needed
@@ -1330,7 +1337,7 @@ class AsteriskGame(Game):
                          f'read, falling back to hardcoded CCC list')
             cls.must_be_active_if_present += cls._ccc_fallback
 
-class WindowsStoreGame(Game):
+class WindowsStoreGame(LoGame):
     """Mixin for Windows Store games, which have a second, fallback directory
     which we must keep in sync with the main one."""
     @property
