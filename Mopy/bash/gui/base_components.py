@@ -494,6 +494,7 @@ class ImageWrapper(object):
                             self.iconSize, self.iconSize,
                             _wx.IMAGE_QUALITY_HIGH))
             else:
+                deprint(f'getting image {self._img_path}')
                 self.bitmap = _wx.Bitmap(self._img_path, self._img_type)
         return self.bitmap
 
