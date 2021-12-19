@@ -89,6 +89,9 @@ def _import_wx(debug):
                 rv = _wx.PyApp.MainLoop(self)
                 if restore_stdio: self.RestoreStdio()
                 return rv
+            def InitLocale(self):
+                if sys.platform.startswith('win') and sys.version_info > (3,8):
+                    locale.setlocale(locale.LC_CTYPE, 'C') # pass?
         # Initialize the App instance once
         global bash_app
         bash_app = _BaseApp(not debug) # redirect std out
@@ -287,7 +290,7 @@ def main(opts):
         initialization.init_dirs_mopy()
         # Early setup is done, delegate to the main init method
         _main(opts, wx_locale, wxver)
-    except Exception:
+    except Exception as e:
         caught_exc = traceback.format_exc()
         try:
             # Check if localize succeeded in setting up translations, otherwise
