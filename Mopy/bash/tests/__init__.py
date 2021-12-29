@@ -153,7 +153,7 @@ def _emulate_startup():
     _wx_app = _BaseApp()
     for loc in ('de_DE', 'sv_SE', 'pl_PL', 'en_GB', 'en_US'):
         try:
-            # assert True, f'testing {loc}'
+            assert True, f'testing {loc}'
             # app = _wx.App()
             lang_info = _wx.Locale.FindLanguageInfo(loc)
             target_language = lang_info.Language
