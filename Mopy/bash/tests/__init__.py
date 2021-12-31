@@ -39,15 +39,8 @@ bush = None
 _pj = os.path.join
 _img_folder = _pj(os.path.dirname(__file__), '..', 'images')
 
-def test_wx(self):
-    try:
-        for loc in ('de_DE', 'sv_SE', 'pl_PL', 'en_GB', 'en_US'):
-            app = _wx.App()
-            locl = _wx.Locale(loc)
-            _wx.Bitmap(_pj(_img_folder, 'reload16.png'),
-                       _wx.BITMAP_TYPE_PNG)
-    finally:
-        _emulate_startup()
+print(f'Python {sys.version} on {sys.platform}')
+print(f'wx version {_wx.__version__}')
 
 class FailedTest(Exception):
     """Misc exception for when a test should fail for meta reasons."""
@@ -157,9 +150,19 @@ def _emulate_startup():
     global bush
     global _wx_app
     _wx_app = _BaseApp()
+    for loc in ('de_DE', 'sv_SE', 'pl_PL', 'en_GB', 'en_US'):
+        try:
+            print(f'testing {loc}')
+            # app = _wx.App()
+            locl = _wx.Locale(loc)
+            _wx.Bitmap(_pj(_img_folder, 'reload16.png'), _wx.BITMAP_TYPE_PNG)
+        except Exception as e:
+            print(f'{loc} failed with {e}')
     trans = gettext.NullTranslations()
     trans.install()
     from .. import bush
     # noinspection PyProtectedMember
     bush._supportedGames()
     set_game(u'Oblivion') # just need to pick one to start
+
+_emulate_startup()
