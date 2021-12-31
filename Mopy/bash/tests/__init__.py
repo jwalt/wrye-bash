@@ -158,6 +158,7 @@ def _emulate_startup():
             _wx.Bitmap(_pj(_img_folder, 'reload16.png'), _wx.BITMAP_TYPE_PNG)
         except Exception as e:
             print(f'{loc} failed with {e}')
+            raise Exception(f'{loc} failed with {e}') from e
     trans = gettext.NullTranslations()
     trans.install()
     from .. import bush
