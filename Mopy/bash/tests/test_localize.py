@@ -39,13 +39,6 @@ _img_folder = _pj(os.path.dirname(__file__), '..', 'images')
 class TestLocalize:
     """Test setup_locale WIP"""
 
-    def test_wx(self):
-        for loc in ('de_DE', 'sv_SE', 'pl_PL', 'en_GB', 'en_US'):
-            app = _wx.App()
-            locl = _wx.Locale(loc)
-            _wx.Bitmap(_pj(_img_folder, 'reload16.png'),
-                       _wx.BITMAP_TYPE_PNG)
-
     @classmethod
     def setup_class(cls):
         bolt.deprintOn = True
