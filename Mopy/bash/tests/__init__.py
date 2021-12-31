@@ -153,10 +153,15 @@ def _emulate_startup():
     _wx_app = _BaseApp()
     for loc in ('de_DE', 'sv_SE', 'pl_PL', 'en_GB', 'en_US'):
         try:
-            print(f'testing {loc}')
+            assert True, f'testing {loc}'
             # app = _wx.App()
-            locl = _wx.Locale(loc)
+            lang_info = _wx.Locale.FindLanguageInfo(loc)
+            target_language = lang_info.Language
+            target_canonical = lang_info.CanonicalName
+            target_locale = _wx.Locale(target_language)
             _wx.Bitmap(_pj(_img_folder, 'reload16.png'), _wx.BITMAP_TYPE_PNG)
+            assert True, f"Set wxPython locale to '{loc}, " \
+                f"{target_canonical=}: {target_locale=}: _wx.Locale result "
         except Exception as e:
             print(f'{loc} failed with {e}')
             raise Exception(f'{loc} failed with {e}') from e
