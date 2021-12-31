@@ -141,7 +141,8 @@ class _BaseApp(_wx.App):
         return rv
     def InitLocale(self):
         if sys.platform.startswith('win') and sys.version_info > (3,8):
-            locale.setlocale(locale.LC_CTYPE, 'C')
+            # locale.setlocale(locale.LC_CTYPE, 'C')
+            pass
 
 def _emulate_startup():
     """Emulates a normal Wrye Bash startup, but without launching basher
