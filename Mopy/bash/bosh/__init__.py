@@ -36,6 +36,7 @@ import sys
 import traceback
 from collections import OrderedDict
 from functools import wraps, partial
+from inspect import signature
 from typing import Iterable
 #--Local
 from ._mergeability import isPBashMergeable, is_esl_capable
@@ -186,6 +187,17 @@ class ListInfo(object):
             return None
         return self.unique_name(new_name)
 
+def _checked_wrapped_modinfo(func):
+    """Delegate to self.modInfo if exists, else check extension."""
+    sig = signature(func)
+    exts = sig.parameters['exts'].default
+    @wraps(func)
+    def _wrapper(self):
+        if self.mod_info:
+            return getattr(self.mod_info, func.__name__)()
+        return self.get_extension() in exts
+    return _wrapper
+
 class MasterInfo(object):
     """Slight abstraction over ModInfo that allows us to represent masters that
     are missing an active mod counterpart."""
@@ -206,24 +218,14 @@ class MasterInfo(object):
         self.curr_name = GPath_no_norm(name)
         self.mod_info = modInfos.get(name, None)
 
-    def has_esm_flag(self):
-        if self.mod_info:
-            return self.mod_info.has_esm_flag()
-        else:
-            return self.get_extension() in (u'.esm', u'.esl')
+    @_checked_wrapped_modinfo
+    def has_esm_flag(self, exts=frozenset(('.esm', '.esl'))): pass
 
-    def in_master_block(self):
-        if self.mod_info:
-            return self.mod_info.in_master_block()
-        else:
-            return self.get_extension() in (u'.esm', u'.esl')
+    @_checked_wrapped_modinfo
+    def in_master_block(self, exts=frozenset(('.esm', '.esl'))): pass
 
-    def is_esl(self):
-        """Delegate to self.modInfo.is_esl if exists, else check extension."""
-        if self.mod_info:
-            return self.mod_info.is_esl()
-        else:
-            return self.get_extension() == u'.esl'
+    @_checked_wrapped_modinfo
+    def is_esl(self, exts=frozenset(['.esl'])): pass
 
     def hasTimeConflict(self):
         """True if has an mtime conflict with another mod."""
