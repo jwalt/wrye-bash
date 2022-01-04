@@ -120,15 +120,14 @@ class Saves_ProfilesData(balt.ListEditorData):
         if newName.lower() in lowerNames:
             balt.showError(self,_(u'Name must be unique.'))
             return False
-        if len(newName) == 0 or len(newName) > 64:
+        if not (1 <= len(newName) <= 64):
             balt.showError(self.parent,
                 _(u'Name must be between 1 and 64 characters long.'))
             return False
         #--Rename
-        oldDir, newDir = (self.baseSaves.join(subdir) for subdir in
-                          (oldName, newName))
+        oldDir, newDir = map(self.baseSaves.join, (oldName, newName))
         oldDir.moveTo(newDir)
-        oldSaves, newSaves = (_win_join(name_) for name_ in (oldName, newName))
+        oldSaves, newSaves = map(_win_join, (oldName, newName))
         if bosh.saveInfos.localSave == oldSaves:
             Link.Frame.saveList.set_local_save(newSaves)
         bosh.saveInfos.profiles.moveRow(oldSaves,newSaves)

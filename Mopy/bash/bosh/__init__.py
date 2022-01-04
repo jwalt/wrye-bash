@@ -3190,8 +3190,7 @@ class ModInfos(FileInfos):
     # does not really belong here, but then where ?
         """Save current plugins into arcSaves directory, load plugins from
         newSaves directory and set oblivion version."""
-        arcPath, newPath = (dirs[u'saveBase'].join(saves) for saves in
-                            (arcSaves, newSaves))
+        arcPath, newPath = map(dirs[u'saveBase'].join, (arcSaves, newSaves))
         if load_order.swap(arcPath, newPath):
             self.refreshLoadOrder(unlock_lo=True)
         # Swap Oblivion version to memorized version
