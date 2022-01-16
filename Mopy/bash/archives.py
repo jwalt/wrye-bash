@@ -46,7 +46,13 @@ def exe7z_quote():
     return f'"{exe7z}"' if os_name == 'nt' else exe7z
 
 def compress7z(dest_dir, full_dest, rel_dest, srcDir, progress=None, *,
-               solid=u'-ms=on', archiveType=u'7z', temp_list=None):
+               is_solid=None, archiveType=u'7z', temp_list=None,
+               blockSize=None):
+    if is_solid is None:
+        solid = '-ms=on'
+    else:
+        rel_dest, archiveType, solid = _compressionSettings(
+            rel_dest, blockSize, is_solid)
     join_star = srcDir.join(u'*').s # add a wildcard at the end of the path
     out_args = [join_star] if temp_list is None else [f'-i!{join_star}',
                                                       f'-x@{temp_list}']
@@ -117,7 +123,7 @@ def wrapPopenOut(command, wrapper, errorMsg):
         raise StateError(f'{errorMsg}\nPopen return value: {returncode:d}')
 
 #  WIP: http://sevenzip.osdn.jp/chm/cmdline/switches/method.htm
-def compressionSettings(fn_archive, blockSize, isSolid):
+def _compressionSettings(fn_archive, blockSize, isSolid):
     archiveType = writeExts.get(fn_archive.cext)
     if not archiveType:
         #--Always fall back to using the defaultExt
