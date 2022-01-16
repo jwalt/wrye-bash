@@ -287,7 +287,9 @@ class OmodFile(object):
 
         # Now decompress
         progress(0.3)
-        cmd = [bass.dirs[u'compiled'].join(u'lzma').s,u'd',outPath.join(dataPath.sbody+u'.tmp').s, outPath.join(dataPath.sbody+u'.uncomp').s]
+        cmd = [bass.dirs[u'compiled'].join(u'lzma.exe').s, u'd',
+               outPath.join(dataPath.sbody + u'.tmp').s,
+               outPath.join(dataPath.sbody + u'.uncomp').s]
         subprocess.call(cmd, startupinfo=startupinfo)
         progress(0.8)
 
