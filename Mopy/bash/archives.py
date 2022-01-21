@@ -50,10 +50,10 @@ def exe7z_quote():
 def compress7z(dest_dir, full_dest, rel_dest, srcDir, progress=None, *,
                solid=u'-ms=on', archiveType=u'7z', temp_list=None):
     join_star = srcDir.join(u'*').s # add a wildcard at the end of the path
-    out_args = [join_star] if temp_list is None else [f'-i!"{join_star}"',
+    out_args = [join_star] if temp_list is None else [f'-i!{join_star}',
                                                       f'-x@{temp_list}']
     command = [exe7z, u'a', full_dest.temp.s, f'-t{archiveType}',
-        *solid.split(), u'-y', u'-r', f'-o"{dest_dir}"', # quiet, recursive
+        *solid.split(), u'-y', u'-r', f'-o{dest_dir}', # quiet, recursive
         *out_args, u'-scsUTF-8', u'-sccUTF-8']  # encode output in unicode
     if progress is not None: #--Used solely for the progress bar
         length = sum(map(len, (files for x, y, files in os.walk(srcDir.s))))
