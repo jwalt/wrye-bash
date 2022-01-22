@@ -81,12 +81,12 @@ class Saves_ProfilesData(balt.ListEditorData):
     def getInfo(self,item):
         """Returns string info on specified item."""
         profileSaves = _win_join(item)
-        return bosh.saveInfos.profiles.getItem(profileSaves, u'info',
+        return bosh.saveInfos.get_profile_attr(profileSaves, u'info',
                                                _(u'About %s:') % item)
     def setInfo(self, item, info_text):
         """Sets string info on specified item."""
         profileSaves = _win_join(item)
-        bosh.saveInfos.profiles.setItem(profileSaves, u'info', info_text)
+        bosh.saveInfos.set_profile_attr(profileSaves, u'info', info_text)
 
     def add(self):
         """Adds a new profile."""
@@ -109,7 +109,8 @@ class Saves_ProfilesData(balt.ListEditorData):
             return False
         self.baseSaves.join(newName).makedirs()
         newSaves = _win_join(newName)
-        bosh.saveInfos.profiles.setItem(newSaves,u'vOblivion',bosh.modInfos.voCurrent)
+        bosh.saveInfos.set_profile_attr(newSaves, 'vOblivion',
+                                        bosh.modInfos.voCurrent)
         return newName
 
     def rename(self,oldName,newName):
@@ -130,11 +131,11 @@ class Saves_ProfilesData(balt.ListEditorData):
         oldSaves, newSaves = map(_win_join, (oldName, newName))
         if bosh.saveInfos.localSave == oldSaves:
             Link.Frame.saveList.set_local_save(newSaves)
-        bosh.saveInfos.profiles.moveRow(oldSaves,newSaves)
+        bosh.saveInfos.rename_rows(oldSaves, newSaves)
         return newName
 
     def remove(self,profile):
-        """Removes load list."""
+        """Removes save profile."""
         profileSaves = _win_join(profile)
         #--Can't remove active or Default directory.
         if bosh.saveInfos.localSave == profileSaves:
@@ -153,7 +154,7 @@ class Saves_ProfilesData(balt.ListEditorData):
             raise BoltError(f'Sanity check failed: No '
                 f'"{bush.game.my_games_name}\\Saves" in {profileDir}.')
         shutil.rmtree(profileDir.s) #--DO NOT SCREW THIS UP!!!
-        bosh.saveInfos.profiles.delRow(profileSaves)
+        bosh.saveInfos.rename_rows(profileSaves, None)
         return True
 
 #------------------------------------------------------------------------------

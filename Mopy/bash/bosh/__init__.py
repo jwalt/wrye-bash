@@ -3194,9 +3194,9 @@ class ModInfos(FileInfos):
         if load_order.swap(arcPath, newPath):
             self.refreshLoadOrder(unlock_lo=True)
         # Swap Oblivion version to memorized version
-        voNew = saveInfos.profiles.getItem(newSaves, u'vOblivion', None)
+        voNew = saveInfos.get_profile_attr(newSaves, 'vOblivion', None)
         if voNew is None:
-            saveInfos.profiles.setItem(newSaves, u'vOblivion', self.voCurrent)
+            saveInfos.set_profile_attr(newSaves, u'vOblivion', self.voCurrent)
             voNew = self.voCurrent
         if voNew in self.voAvailable: self.setOblivionVersion(voNew)
 
@@ -3267,15 +3267,29 @@ class SaveInfos(FileInfos):
         super(SaveInfos, self).__init__(dirs[u'saveBase'].join(self.localSave),
                                         factory=SaveInfo)
         # Save Profiles database
-        self.profiles = bolt.DataTable(bolt.PickleDict(
-            dirs[u'saveBase'].join(u'BashProfiles.dat')))
+        self.profiles = bolt.PickleDict(
+            dirs[u'saveBase'].join(u'BashProfiles.dat'), load_pickle=True)
         # save profiles used to have a trailing slash, remove it if present
-        for row in list(self.profiles):
-            if row.endswith(u'\\'):
-                self.profiles.moveRow(row, row[:-1])
+        for row in [r for r in self.profiles.pickled_data if r.endswith('\\')]:
+            self.rename_rows(row, row[:-1])
         SaveInfo.cosave_types = cosaves.get_cosave_types(
             bush.game.fsName, self._parse_save_path,
             bush.game.Se.cosave_tag, bush.game.Se.cosave_ext)
+
+    def get_profile_attr(self, prof_key, attr_key, default_val):
+        return self.profiles.pickled_data.get(prof_key, {}).get(attr_key,
+                                                                default_val)
+
+    def set_profile_attr(self, prof_key, attr_key, val):
+        self.profiles.pickled_data.setdefault(prof_key, {})[attr_key] = val
+
+    def rename_rows(self, oldName, newName):
+        """Rename save profile - if newName is None just delete the row."""
+        pd = self.profiles.pickled_data
+        if oldName in pd:
+            if newName is not None:
+                pd[newName] = pd[oldName]
+            del pd[oldName]
 
     @classmethod
     def rightFileType(cls, fileName):
