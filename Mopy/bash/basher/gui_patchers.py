@@ -28,7 +28,7 @@ from itertools import chain
 # Internal
 from .. import bass, bosh, bush, balt, load_order, bolt, exception
 from ..balt import Links, SeparatorLink, CheckLink
-from ..bolt import GPath, text_wrap, dict_sort
+from ..bolt import GPath, text_wrap, dict_sort, GPath_no_norm
 from ..gui import Button, CheckBox, HBoxedLayout, Label, LayoutOptions, \
     Spacer, TextArea, TOP, VLayout, EventResult, PanelWin, ListBox, \
     CheckListBox, DeselectAllButton, SelectAllButton, FileOpenMultiple
@@ -424,7 +424,7 @@ class _ListPatcherPanel(_PatcherPanel):
             config.get(u'configChoices', self.__class__.default_configChoices))
         #--Verify file existence
         self.configItems = [srcPath.s for srcPath in self.configItems if (
-                    srcPath in bosh.modInfos or (reCsvExt.search(
+            (srcPath := GPath_no_norm(srcPath)) in bosh.modInfos or (reCsvExt.search(
                 srcPath.s) and srcPath in patches_set()))]
         if self.__class__.forceItemCheck:
             for item in self.configItems:
