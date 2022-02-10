@@ -181,7 +181,7 @@ class SaveFileHeader(object):
             out.write(encoded)
 
     def _master_block_size(self):
-        return 1 + sum(len(x) + 2 for x in self.masters)
+        return 1 + sum(len(x) + 2 for x in self.masters) ##: should be in bytes!!
 
     @property
     def can_edit_header(self):
@@ -649,7 +649,7 @@ class FalloutNVSaveHeader(SaveFileHeader):
         return oldMasters
 
     def _master_block_size(self):
-        return 2 + sum(len(x) + 4 for x in self.masters)
+        return 2 + sum(len(x) + 4 for x in self.masters) ## TODO use the byte str!!
 
     def calc_time(self):
         # gameDate format: hours.minutes.seconds

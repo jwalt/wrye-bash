@@ -4352,7 +4352,7 @@ def InitSettings(): # this must run first !
     settings.loadDefaults(settingDefaults)
     bass.settings['bash.mods.renames'] = forward_compat_path_to_fn(
         bass.settings['bash.mods.renames'],
-        value_type=lambda x: FName('%s' % x))
+        value_type=lambda x: FName(str('%s' % x))) ##: str needed?
     # The colors dictionary only gets copied into settings if it is missing
     # entirely, copy new entries if needed
     for color_key, color_val in settingDefaults[u'bash.colors'].items():
