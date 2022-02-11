@@ -2062,9 +2062,15 @@ class TreeCtrl(_AComponent):
         root = self._native_widget.AddRoot(title)
         self._native_widget.Bind(wx.EVT_MOTION, self.OnMotion)
         for item, subitems in items_dict.items():
-            child = self._native_widget.AppendItem(root, item.s)
+            if not isinstance(item, str):
+                deprint(f'{item!r} passed')
+                item = '%s' % item
+            child = self._native_widget.AppendItem(root, item)
             for subitem in subitems:
-                self._native_widget.AppendItem(child, subitem.s)
+                if not isinstance(subitem, str):
+                    deprint(f'{subitem!r} passed')
+                    subitem = '%s' % subitem
+                self._native_widget.AppendItem(child, subitem)
             self._native_widget.Expand(child)
 
     def OnMotion(self, event): return
