@@ -319,7 +319,7 @@ class Installer_Wizard(_Installer_AWizardLink):
         for iniFile, wizardEdits in ret.ini_edits.items():
             basen = os.path.basename(os.path.splitext(iniFile)[0])
             outFile = bass.dirs[u'ini_tweaks'].join(
-                u'%s - Wizard Tweak [%s].ini' % (installer, basen))
+                f'{installer} - Wizard Tweak [{basen}].ini')
             # Use UTF-8 since this came from a wizard.txt which could have
             # characters in it that are unencodable in cp1252 - plus this is
             # just a tweak, won't be read by the game
@@ -1267,7 +1267,7 @@ class InstallerConverter_ApplyEmbedded(_InstallerLink):
     def Execute(self):
         iname, inst = next(self.iselected_pairs()) # first selected pair
         #--Ask for an output filename
-        dest = self._askFilename(_(u'Output file:'), filename=iname.stail)
+        dest = self._askFilename(_(u'Output file:'), filename=iname.ci_key)
         if not dest: return
         with balt.Progress(_(u'Extracting BCF...'),u'\n'+u' '*60) as progress:
             destinations, converted = self.idata.applyEmbeddedBCFs(

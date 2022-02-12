@@ -561,12 +561,11 @@ class Installer(ListInfo):
         if start:
             start_tup = tuple(start) # do this ahead of time
             skips.append(lambda f: f.startswith(start_tup))
-        skipEspmVoices = not self.skipVoices and {x.cs for x in self.espmNots}
-        if skipEspmVoices:
+        if not self.skipVoices and self.espmNots:
             def _skip_espm_voices(fileLower):
                 farPos = fileLower.startswith( # u'sound\\voice\\', 12 chars
                     voice_dir) and fileLower.find(os_sep, 12)
-                return farPos > 12 and fileLower[12:farPos] in skipEspmVoices
+                return farPos > 12 and fileLower[12:farPos] in self.espmNots
             skips.append(_skip_espm_voices)
         return skips, skip_ext
 
@@ -2841,7 +2840,7 @@ class InstallersData(DataStore):
                         ##: Support for inactive BSA conflicts
                         del remaining_bsas[bsa_info]
                     else:
-                        _process_bsa_conflicts(bsa_info, package.s)
+                        _process_bsa_conflicts(bsa_info, package)
             # Check all left-over BSAs - they either came from an INI or from a
             # plugin file not managed by BAIN (e.g. a DLC)
             for rem_bsa in list(remaining_bsas):
@@ -2864,7 +2863,7 @@ class InstallersData(DataStore):
                     conflict_type = lower_loose
                 else:
                     conflict_type = higher_loose
-                conflict_type.append((installer, package.s, curConflicts))
+                conflict_type.append((installer, package, curConflicts))
         return lower_loose, higher_loose, lower_bsa, higher_bsa
 
     def find_src_assets(self, src_installer, active_bsas):
