@@ -86,6 +86,8 @@ class _AMerger(ImportPatcher):
         self.loadFactory = self._patcher_read_fact(by_sig=self._wanted_subrecord)
         progress.setFull(len(self.srcs))
         for index,srcMod in enumerate(self.srcs):
+            # FIXME: relations
+            if srcMod.cext == '.csv': continue
             srcInfo = self.patchFile.p_file_minfos[srcMod]
             srcFile = self._mod_file_read(srcInfo)
             for block in self._wanted_subrecord:
