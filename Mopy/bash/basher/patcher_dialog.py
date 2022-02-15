@@ -181,7 +181,8 @@ class PatchDialog(DialogWindow):
             progress(0.9)
             self._save_pbash(patchFile, patch_name)
             #--Done
-            progress.Destroy(); progress = None
+            progress.Destroy()
+            progress = None
             timer2 = time.process_time()
             #--Readme and log
             log.setHeader(None)

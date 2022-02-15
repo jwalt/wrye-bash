@@ -1744,7 +1744,8 @@ class FileInfos(TableFileInfos):
                                              check_existence)
         if not deleted: return deleted
         for del_fn in deleted:
-            self.pop(del_fn, None); self.corrupted.pop(del_fn, None)
+            self.pop(del_fn, None)
+            self.corrupted.pop(del_fn, None)
             self.table.pop(del_fn, None)
         return deleted
 
