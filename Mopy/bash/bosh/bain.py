@@ -1156,12 +1156,12 @@ class Installer(ListInfo):
             size,crc = data_sizeCrc[dest]
             # Work with ghosts lopped off internally and check the destination,
             # since plugins may have been renamed
-            if (dest_path := FName(dest)) in installer_plugins:
-                mods.add(dest_path)
-            elif ini_name := is_ini_tweak(dest):
+            if (dest_fname := FName('%s' % dest)) in installer_plugins:
+                mods.add(dest_fname)
+            elif ini_name := is_ini_tweak(dest_fname):
                 inis.add(FName(ini_name))
-            elif dest_path.ci_ext == bsa_ext:
-                bsas.add(dest_path)
+            elif dest_fname.ci_ext == bsa_ext:
+                bsas.add(dest_fname)
             data_sizeCrcDate_update[dest] = (size, crc, -1) ##: HACK we must try avoid stat'ing the mtime
             add_source(srcDirJoin(src))
             # Append the ghost extension JIT since the FS operation below will
@@ -1819,7 +1819,7 @@ class InstallersData(DataStore):
         super(InstallersData, self)._delete_operation(paths, markers, **kwargs)
 
     def delete_refresh(self, deleted, markers, check_existence):
-        deleted = {item.tail for item in deleted
+        deleted = {FName(item.stail) for item in deleted
                    if not check_existence or not item.exists()}
         if deleted:
             self.irefresh(what=u'I', deleted=deleted)

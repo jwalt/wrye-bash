@@ -959,11 +959,13 @@ class UIList(wx.Panel):
                 insert = True
         else: # no way we're inserting with a None item
             item = self.GetItem(itemDex)
+        ##: HACK or workaround for installer labels giving back Paths
+        str_label = '%s' % self.labels[allow_cols[0]](self, item)
         if insert:
             # We're inserting a new item, so we need special handling for the
             # first SetItem call - see InsertListCtrlItem
             self.__gList.InsertListCtrlItem(
-                itemDex, self.labels[allow_cols[0]](self, item), item,
+                itemDex, str_label, item,
                 decorate_cb=partial(self.__setUI, item, target_ini_setts))
         else:
             # The item is already in the UIList, so we only need to redecorate
@@ -972,10 +974,12 @@ class UIList(wx.Panel):
             self.__setUI(item, target_ini_setts, gItem)
             # Piggyback off the SetItem call we need for __setUI to also set
             # the first column's text
-            gItem.SetText(self.labels[allow_cols[0]](self, item))
+            gItem.SetText(str_label)
             gl_set_item(gItem)
         for col_index, col in enumerate(allow_cols[1:], start=1):
-            gl_set_item(itemDex, col_index, self.labels[col](self, item))
+            ##: HACK, same as above
+            gl_set_item(itemDex, col_index, '%s' % self.labels[col](
+                self, item))
 
     class _ListItemFormat(object):
         def __init__(self):

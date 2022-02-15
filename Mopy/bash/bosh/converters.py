@@ -91,8 +91,8 @@ class ConvertersData(DataDict):
     #--Converters
     @staticmethod
     def validConverterName(fn_conv):
-        return fn_conv.ci_ext == defaultExt and \
-            ((lo := fn_conv.ci_body.lower())[-4:] == u'-bcf') or u'-bcf-' in lo
+        ends_bcf = (lo := fn_conv.ci_body.lower())[-4:] == '-bcf'
+        return fn_conv.ci_ext == defaultExt and ends_bcf or '-bcf-' in lo
 
     def refreshConverters(self, progress=None, fullRefresh=False):
         """Refresh converter status, and move duplicate BCFs out of the way."""
