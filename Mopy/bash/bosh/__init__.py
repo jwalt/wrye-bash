@@ -1616,9 +1616,7 @@ class TableFileInfos(DataStore):
 
         :type fileName: bolt.FName | str
         :rtype: _sre.SRE_Match | None"""
-        ##: This shouldn't take bytes, ensure it doesn't (especially wrt. to
-        # pickle-related usages)
-        return cls.file_pattern.search(u'%s' % fileName)
+        return cls.file_pattern.search(fileName)
 
     #--Delete
     def files_to_delete(self, fileNames, **kwargs):
@@ -3309,7 +3307,7 @@ class SaveInfos(FileInfos):
 
     @classmethod
     def rightFileType(cls, fileName):
-        return all(cls._parse_save_path(u'%s' % fileName))
+        return all(cls._parse_save_path(fileName))
 
     @classmethod
     def valid_save_exts(cls):
