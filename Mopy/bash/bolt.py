@@ -567,9 +567,16 @@ class FNDict(dict):
 # Forward compat functions - if we decide we only want to pickle std types
 # those stay
 def forward_compat_path_to_fn(di, value_type=lambda x: x):
-    return FNDict(('%s' % k, value_type(v)) for k, v in di.items())
+    try:
+        return FNDict(('%s' % k, value_type(v)) for k, v in di.items())
+    except ValueError:
+        return FNDict((str('%s' % k), value_type(v)) for k, v in di.items())
+
 def forward_compat_path_to_fn_list(li, ret_type=list):
-    return ret_type(map(FName, map(str, li)))
+    try:
+        return ret_type(map(FName, map(str, li)))
+    except ValueError: # tried to FName(str(path)) where type(path.s) == CIstr
+        return ret_type(map(FName, map(str,  map(str, li))))
 
 class DefaultLowerDict(LowerDict, collections.defaultdict):
     """LowerDict that inherits from defaultdict."""
