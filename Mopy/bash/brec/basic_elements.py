@@ -526,7 +526,7 @@ class MelStrings(MelString):
             # Don't dump out a pointless terminator when we have zero strings
             return
         str_data = null1.join( # TODO use encode_complex_string?
-            encode(x, firstEncoding=bolt.pluginEncoding) for x in strings)
+            encode(x, firstEncoding=bolt.pluginEncoding) for x in strings)+null1
         # call *MelBase* packSub which however will call MelString._dump_bytes
         super(MelString, self).packSub(out, str_data)
 
